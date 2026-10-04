@@ -21,8 +21,9 @@ function difficultyMixHTML(mix) {
 }
 
 function paperCard(p) {
-  // 试卷卡片上的标签预览：最多 3 个，展示规则统一走 TAGS_CONFIG
-  const tags = renderTags(p.tags, { max: 3 });
+  // 试卷标签预览 —— 预留字段驱动，当前数据为空，卡片上不显示任何标签。
+  // 将来数据补上 p.tags 后会自动出现，无需改动这里。
+  const tags = renderTags(p.tags, { max: PAPER_TAGS_CONFIG.max });
 
   return `
     <a class="paper-card" href="paper.html?id=${encodeURIComponent(p.slug)}">
@@ -49,7 +50,8 @@ function apply() {
   if (q) {
     list = list.filter((p) => {
       if (p.name.toLowerCase().includes(q)) return true;
-      if ((p.tags || []).some((t) => t.toLowerCase().includes(q))) return true;
+      // 预留字段参与检索；字段为空时这一段自然不命中
+      if (PAPER_TAGS_CONFIG.search && (p.tags || []).some((t) => String(t).toLowerCase().includes(q))) return true;
       return false;
     });
   }
