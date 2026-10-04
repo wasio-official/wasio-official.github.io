@@ -21,13 +21,8 @@ function difficultyMixHTML(mix) {
 }
 
 function paperCard(p) {
-  const tags = (p.tags || [])
-    .slice(0, 3)
-    .map((t) => {
-      const leaf = t.split("/").pop();
-      return `<span class="tag" title="${esc(t)}">${esc(leaf)}</span>`;
-    })
-    .join("");
+  // 试卷卡片上的标签预览：最多 3 个，展示规则统一走 TAGS_CONFIG
+  const tags = renderTags(p.tags, { max: 3 });
 
   return `
     <a class="paper-card" href="paper.html?id=${encodeURIComponent(p.slug)}">

@@ -38,6 +38,109 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
+/* ---------------------------------------------- 标签渲染配置
+
+   ⚠️ 这里是标签展示的**唯一控制点**。
+   未来题目标签会新增字段（如 `tag_zh`、`tag_display`、`tag_level` 等），
+   届时只需改下面这一段，全站的标签展示会一起生效，无需改各处页面脚本。
+
+   TAG_CONFIG.mode 可选值：
+     "leaf"  —— 取路径末级（当前行为）：`力学/刚体转动/转动定律/转动惯量` → `转动惯量`
+     "full"  —— 显示完整路径
+     "field" —— 优先取 item[ TAGS_CONFIG.field ]，缺失时回退到 "leaf" 行为
+   ---------------------------------------------- */
+
+const TAGS_CONFIG = {
+  // 展示模式，见上方说明
+  mode: "leaf",
+
+  // mode === "field" 时，从题目的哪个字段取标签
+  // 预留：未来数据加上该字段后，把 mode 改成 "field" 即可自动启用
+  field: "tag_display",
+
+  // 展示上限（0 或 null 表示不限制）
+  max: 0,
+
+  // 悬浮提示用哪个值（"full" = 完整路径）
+  tooltip: "full",
+};
+
+/** 取标签的展示文本 */
+function tagLabel(tag) {
+  const s = String(tag ?? "");
+  if (TAGS_CONFIG.mode === "full") return s;
+  return s.split("/").pop();
+}
+
+/**
+ * 归一化一条标签：支持「字符串」与「对象」两种形态。
+ * 对象形态是为未来的新字段预留的 —— 若数据某天变成
+ *   { path: "力学/…/转动惯量", tag_display: "转动惯量", tag_zh: "转动惯量" }
+ * 这里会自动把展示名与完整路径拆开，页面脚本无需改动。
+ */
+function normalizeTag(tag) {
+  // 纯字符串：按配置推导
+  if (typeof tag === "string") {
+    return { raw: tag, label: tagLabel(tag) };
+  }
+
+  // 对象形态：优先取配置指定的字段
+  if (tag && typeof tag === "object") {
+    const raw = tag.path || tag.tag || tag.name || tag.full || "";
+
+    // 只有 field 模式才采用新字段；其余模式一律从路径推导，
+    // 保证「改 mode」确实能切换展示口径，而不是被数据悄悄改写。
+    const preferred =
+      TAGS_CONFIG.mode === "field" ? tag[TAGS_CONFIG.field] : null;
+
+    const label =
+      (preferred && String(preferred).trim()) ||
+      tagLabel(raw) ||
+      String(raw);
+
+    return { raw, label, extra: tag };
+  }
+
+  return { raw: "", label: "" };
+}
+
+/** 取标签的悬浮提示文本 */
+function tagTooltip(tag, raw) {
+  const s = String(tag ?? "");
+  if (TAGS_CONFIG.tooltip === "none") return "";
+  return s;
+}
+
+/**
+ * 渲染一组标签为 HTML。
+ * @param {Array<string|object>} tags 标签数组（字符串或对象）
+ * @param {object}   [opts]
+ * @param {number}   [opts.max]  本处最多显示几个（覆盖全局配置）
+ * @param {string}   [opts.empty] 无标签时显示的占位文本
+ */
+function renderTags(tags, opts = {}) {
+  let list = Array.isArray(tags)
+    ? tags.map(normalizeTag).filter((t) => t.label)
+    : [];
+
+  const max = opts.max ?? TAGS_CONFIG.max;
+  if (max > 0) list = list.slice(0, max);
+
+  if (!list.length) {
+    return opts.empty
+      ? `<span class="tag muted">${esc(opts.empty)}</span>`
+      : "";
+  }
+
+  return list
+    .map(({ raw, label }) => {
+      const tip = TAGS_CONFIG.tooltip === "full" ? raw : "";
+      const title = tip && tip !== label ? ` title="${esc(tip)}"` : "";
+      return `<span class="tag"${title}>${esc(label)}</span>`;
+    })
+    .join("");
+}
+
 /* ---------------------------------------------- 难度徽标 */
 
 function difficultyChip(level) {

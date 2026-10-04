@@ -77,9 +77,8 @@ function renderQuestion() {
     { label: item.title },
   ]);
 
-  const tags = (item.tags || [])
-    .map((t) => `<span class="tag" title="${esc(t)}">${esc(t)}</span>`)
-    .join("");
+  // 单题页：展示标签（规则同样统一走 TAGS_CONFIG）
+  const tags = renderTags(item.tags);
 
   const prev = index > 0 ? paper.questions[index - 1] : null;
   const next = index < total - 1 ? paper.questions[index + 1] : null;

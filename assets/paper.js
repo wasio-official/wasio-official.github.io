@@ -1,18 +1,12 @@
 /* ============================================================
    试卷页：列出该卷全部题目（仅显示题号 + 难度 + 考点标签）
+   标签展示规则统一由 app.js 的 TAGS_CONFIG / renderTags 控制。
    ============================================================ */
 
 const state = { paper: null, q: "" };
 
-/** 取标签末级作为展示名（完整路径放 title 悬浮提示） */
-function leafTag(t) {
-  return t.split("/").pop();
-}
-
 function questionItem(item, index, slug) {
-  const tags = (item.tags || [])
-    .map((t) => `<span class="tag" title="${esc(t)}">${esc(leafTag(t))}</span>`)
-    .join("");
+  const tags = renderTags(item.tags, { empty: "未标注考点" });
 
   return `
     <a class="q-link" href="question.html?p=${encodeURIComponent(slug)}&q=${encodeURIComponent(item.id)}">
@@ -23,8 +17,7 @@ function questionItem(item, index, slug) {
           ${difficultyChip(item.difficulty)}
           ${item.score && item.score.D ? `<span class="chip">难度 ${esc(item.score.D)}</span>` : ""}
         </span>
-        ${tags ? `<span class="q-tags">${tags}</span>`
-               : `<span class="q-tags"><span class="tag muted">未标注考点</span></span>`}
+        <span class="q-tags">${tags}</span>
       </span>
       <span class="q-arrow">›</span>
     </a>`;

@@ -103,6 +103,33 @@ python -m http.server 8099
 > 本地服务器根目录必须是仓库目录（即 `wasio-official.github.io/`），
 > 因为 `data/` 与 `assets/` 都按「相对仓库根」的路径引用。
 
+## 标签展示控制（预留）
+
+题目标签未来会新增字段，站点已为此留好**唯一控制点** ——
+`assets/app.js` 顶部的 `TAGS_CONFIG`：
+
+```js
+const TAGS_CONFIG = {
+  mode: "leaf",        // "leaf" 末级 | "full" 完整路径 | "field" 用新字段
+  field: "tag_display",// mode === "field" 时取哪个字段
+  max: 0,              // 展示上限，0 = 不限
+  tooltip: "full",     // 悬浮提示用完整路径
+};
+```
+
+改 `mode` 一行即可全站切换（题库页卡片、试卷页题目列表、单题页顶部三处一起生效）。
+当前 `leaf` 模式显示路径末级，如 `力学/刚体转动/转动定律/转动惯量` → `转动惯量`。
+
+**未来接数据**：`build.py` 里的 `RESERVED_TAG_FIELDS` 登记了预留字段名
+（`tag_display` / `tag_zh` / `tag_level` / `tag_id`）。构建时这些字段
+**有则透传、无则忽略**，因此现在不影响输出。等数据真的加上字段后：
+
+1. 重跑 `python build.py`（字段会自动进入题目 JSON）；
+2. 把 `TAGS_CONFIG.mode` 改成 `"field"`。
+
+标签同时支持**字符串**与**对象**两种形态，对象形如
+`{ path: "力学/…/转动惯量", tag_display: "转动惯量" }`，前端两种都能渲染。
+
 ## 当前进度
 
 **首版收录 3 套样本试卷，用于跑通全流程**：32 题 / 113 张配图。
