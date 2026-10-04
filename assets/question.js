@@ -72,7 +72,7 @@ function renderQuestion() {
 
   // 面包屑
   renderTopbar([
-    { label: "试卷", href: "index.html" },
+    { label: "题库", href: "library.html" },
     { label: paper.name, href: `paper.html?id=${encodeURIComponent(paper.slug)}` },
     { label: item.title },
   ]);
@@ -205,7 +205,7 @@ function setupKeyboard() {
 
   if (!slug || !qid) {
     document.getElementById("q-main").innerHTML =
-      `<div class="empty"><strong>缺少参数</strong>请从<a href="index.html">首页</a>进入</div>`;
+      `<div class="empty"><strong>缺少参数</strong>请从<a href="library.html">题库</a>进入</div>`;
     return;
   }
 
@@ -220,7 +220,7 @@ function setupKeyboard() {
   } catch (err) {
     document.getElementById("q-main").innerHTML =
       `<div class="empty"><strong>题目加载失败</strong>${esc(err.message)}
-       <p><a href="index.html">返回首页</a></p></div>`;
+       <p><a href="library.html">返回题库</a></p></div>`;
     console.error(err);
   }
 })();

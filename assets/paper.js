@@ -1,16 +1,17 @@
 /* ============================================================
-   试卷页：列出该卷全部题目（含卷内搜索）
+   试卷页：列出该卷全部题目（仅显示题号 + 难度 + 考点标签）
    ============================================================ */
 
 const state = { paper: null, q: "" };
 
+/** 取标签末级作为展示名（完整路径放 title 悬浮提示） */
+function leafTag(t) {
+  return t.split("/").pop();
+}
+
 function questionItem(item, index, slug) {
   const tags = (item.tags || [])
-    .slice(0, 4)
-    .map((t) => {
-      const leaf = t.split("/").pop();
-      return `<span class="tag" title="${esc(t)}">${esc(leaf)}</span>`;
-    })
+    .map((t) => `<span class="tag" title="${esc(t)}">${esc(leafTag(t))}</span>`)
     .join("");
 
   return `
@@ -22,8 +23,8 @@ function questionItem(item, index, slug) {
           ${difficultyChip(item.difficulty)}
           ${item.score && item.score.D ? `<span class="chip">难度 ${esc(item.score.D)}</span>` : ""}
         </span>
-        <span class="q-excerpt">${esc(item.excerpt)}</span>
-        ${tags ? `<span class="q-tags">${tags}</span>` : ""}
+        ${tags ? `<span class="q-tags">${tags}</span>`
+               : `<span class="q-tags"><span class="tag muted">未标注考点</span></span>`}
       </span>
       <span class="q-arrow">›</span>
     </a>`;
@@ -38,7 +39,6 @@ function apply() {
     list = list.filter(
       (it) =>
         it.title.toLowerCase().includes(q) ||
-        it.excerpt.toLowerCase().includes(q) ||
         (it.tags || []).some((t) => t.toLowerCase().includes(q))
     );
   }
@@ -54,11 +54,11 @@ function apply() {
 
 (async function main() {
   const slug = getParam("id");
-  renderTopbar([{ label: "试卷", href: "index.html" }]);
+  renderTopbar([{ label: "题库", href: "library.html" }]);
 
   if (!slug) {
     document.getElementById("q-list").innerHTML =
-      `<div class="empty"><strong>缺少试卷参数</strong><a href="index.html">返回首页</a></div>`;
+      `<div class="empty"><strong>缺少试卷参数</strong><a href="library.html">返回题库</a></div>`;
     return;
   }
 
@@ -89,7 +89,7 @@ function apply() {
     `;
 
     renderTopbar([
-      { label: "试卷", href: "index.html" },
+      { label: "题库", href: "library.html" },
       { label: paper.name },
     ]);
 
@@ -102,7 +102,7 @@ function apply() {
   } catch (err) {
     document.getElementById("q-list").innerHTML =
       `<div class="empty"><strong>试卷加载失败</strong>${esc(err.message)}
-       <p><a href="index.html">返回首页</a></p></div>`;
+       <p><a href="library.html">返回题库</a></p></div>`;
     console.error(err);
   }
 })();

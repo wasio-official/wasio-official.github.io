@@ -7,37 +7,22 @@
 <meta name="description" content="高中物理竞赛题库：试卷、题目、详细解析与答案，含难度评分与考点标签。">
 <link rel="stylesheet" href="assets/app.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f6fd0'/%3E%3Ctext x='16' y='23' font-size='19' font-family='serif' fill='white' text-anchor='middle'%3E%CE%A6%3C/text%3E%3C/svg%3E">
-<script>
-  window.MathJax = {
-    tex: {
-      inlineMath: [["\\(", "\\)"]],
-      displayMath: [["\\[", "\\]"]],
-      processEscapes: true
-    },
-    options: {
-      skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"],
-      ignoreHtmlClass: "no-mathjax"
-    },
-    svg: { fontCache: "global" },
-    startup: { typeset: false }
-  };
-</script>
-<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
-<body>
+<body class="landing">
 
 <header class="topbar"><div class="topbar-inner"></div></header>
 
 <main class="wrap">
 
-  <section class="hero">
+  <section class="hero hero-center">
     <h1>物理竞赛题库</h1>
     <div class="sub">Physics Olympiad Problem Bank</div>
     <p class="hero-note">
-      高中物理竞赛试卷与题目合集：每题附完整题干、详细解析与答案，
-      并标注难度评分与考点标签。点开试卷即可按题浏览。
+      高中物理竞赛试卷与题目合集 —— 每题附完整题干、详细解析与答案，
+      并标注难度评分与考点标签。
     </p>
-    <div class="stats">
+
+    <div class="stats stats-center">
       <div>
         <div class="stat-num" id="stat-papers">—</div>
         <div class="stat-label">套试卷</div>
@@ -51,36 +36,26 @@
         <div class="stat-label">张配图</div>
       </div>
     </div>
-  </section>
 
-  <div class="toolbar">
-    <label class="search">
-      <input id="f-q" type="search" placeholder="搜索试卷名或考点标签…" autocomplete="off">
-    </label>
-    <select class="ctl" id="f-cat"></select>
-    <select class="ctl" id="f-sort">
-      <option value="year">按年份</option>
-      <option value="count">按题量</option>
-      <option value="name">按名称</option>
-    </select>
-  </div>
-
-  <p class="result-line" id="result-line"></p>
-
-  <div class="paper-grid" id="grid">
-    <div class="loading" style="grid-column:1/-1">
-      <div class="spinner"></div>
-      正在加载题库…
+    <div class="landing-actions">
+      <a class="entry entry-primary" href="library.html">
+        <span class="entry-title">进入题库</span>
+        <span class="entry-desc">浏览全部试卷与题目</span>
+      </a>
+      <a class="entry" href="library.html#search">
+        <span class="entry-title">搜索题目</span>
+        <span class="entry-desc">按试卷名或考点标签查找</span>
+      </a>
     </div>
-  </div>
+  </section>
 
 </main>
 
-<footer class="footer">
+<footer class="footer footer-center">
   物理竞赛题库 · 内容来自个人整理的竞赛试卷资料，仅供学习交流使用。
 </footer>
 
 <script src="assets/app.js"></script>
-<script src="assets/home.js"></script>
+<script src="assets/landing.js"></script>
 </body>
 </html>

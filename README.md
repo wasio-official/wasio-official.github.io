@@ -8,14 +8,20 @@
 
 ## 站点结构
 
+**首页与题库功能分离**：首页只作落地页（简介 + 统计 + 入口），
+搜索与试卷浏览集中在独立的题库页。
+
 | 页面 | 地址 | 内容 |
 |------|------|------|
-| 首页 | `/index.html` | 试卷目录、总览统计、搜索 / 类型 / 排序筛选 |
-| 试卷页 | `/paper.html?id=<试卷slug>` | 该卷全部题目列表，含题干预览与考点标签 |
+| 首页（落地页） | `/index.html` | 标题、简介、总览统计、两个入口按钮 |
+| 题库 | `/library.html` | 试卷目录、搜索 / 类型 / 排序筛选 |
+| 试卷页 | `/paper.html?id=<试卷slug>` | 该卷题目列表（**仅题号 + 难度 + 考点标签**） |
 | 单题页 | `/question.html?p=<试卷slug>&q=<题号>` | 题干、详细解析、答案、11 维度难度评分 |
 
 交互要点：
 
+- **试卷页题目列表只显示标签**，不显示题干摘要，便于快速扫读考点。
+- 题库页与试卷页都支持搜索：题库页按试卷名 / 考点标签，试卷页按题号 / 考点标签。
 - **解析与答案默认折叠**，点击标题展开；右上角「显示全部」一键展开/收起。
 - 公式用 **MathJax** 渲染，图片懒加载。
 - 单题页支持键盘 `←` `→` 切换上一题 / 下一题。
@@ -28,11 +34,15 @@
 
 ```
 wasio-official.github.io/
-├── index.html / paper.html / question.html   三个页面
+├── index.html                 落地页
+├── library.html               题库页（搜索 / 筛选）
+├── paper.html                 试卷页
+├── question.html              单题页
 ├── assets/
 │   ├── app.css        全部样式
 │   ├── app.js         公共：数据加载、Markdown→HTML、MathJax、折叠面板
-│   ├── home.js        首页逻辑
+│   ├── landing.js     落地页逻辑（只取统计）
+│   ├── library.js     题库页逻辑
 │   ├── paper.js       试卷页逻辑
 │   └── question.js    单题页逻辑
 └── data/
@@ -90,6 +100,8 @@ python -m http.server 8099
 ```
 
 > 必须用 HTTP 服务打开，直接双击 `index.html`（`file://`）会因浏览器 CORS 限制无法加载 JSON。
+> 本地服务器根目录必须是仓库目录（即 `wasio-official.github.io/`），
+> 因为 `data/` 与 `assets/` 都按「相对仓库根」的路径引用。
 
 ## 当前进度
 

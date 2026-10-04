@@ -1,5 +1,5 @@
 /* ============================================================
-   首页：试卷目录 + 搜索 / 筛选
+   题库页：试卷目录 + 搜索 / 筛选 / 排序
    ============================================================ */
 
 const state = {
@@ -72,7 +72,9 @@ function apply() {
   const grid = document.getElementById("grid");
   const line = document.getElementById("result-line");
 
-  line.textContent = `显示 ${list.length} / ${state.papers.length} 套试卷`;
+  line.textContent = q || state.category
+    ? `显示 ${list.length} / ${state.papers.length} 套试卷`
+    : `共 ${state.papers.length} 套试卷`;
 
   grid.innerHTML = list.length
     ? list.map(paperCard).join("")
@@ -81,19 +83,16 @@ function apply() {
        </div>`;
 }
 
-function initStats() {
-  const s = state.stats || {};
-  document.getElementById("stat-papers").textContent = s.papers ?? "—";
-  document.getElementById("stat-questions").textContent = s.questions ?? "—";
-  document.getElementById("stat-images").textContent = s.images ?? "—";
-}
-
 function initFilters() {
-  const cats = [...new Set(state.papers.map((p) => p.category))].sort();
+  // 类型下拉：来自数据，按数量降序
+  const freq = {};
+  state.papers.forEach((p) => { freq[p.category] = (freq[p.category] || 0) + 1; });
+  const cats = Object.keys(freq).sort((a, b) => freq[b] - freq[a] || a.localeCompare(b, "zh"));
+
   const sel = document.getElementById("f-cat");
   sel.innerHTML =
     `<option value="">全部类型</option>` +
-    cats.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    cats.map((c) => `<option value="${esc(c)}">${esc(c)}（${freq[c]}）</option>`).join("");
 
   document.getElementById("f-q").addEventListener("input", (e) => {
     state.q = e.target.value;
@@ -110,14 +109,20 @@ function initFilters() {
 }
 
 (async function main() {
-  renderTopbar([]);
+  renderTopbar([{ label: "题库" }]);
   try {
     const data = await loadPapers();
     state.papers = data.papers || [];
     state.stats = data.stats || {};
-    initStats();
     initFilters();
     apply();
+
+    // 支持 library.html#search 直接聚焦搜索框
+    if (location.hash === "#search") {
+      const input = document.getElementById("f-q");
+      input.focus();
+      input.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
   } catch (err) {
     document.getElementById("grid").innerHTML =
       `<div class="empty" style="grid-column:1/-1">
