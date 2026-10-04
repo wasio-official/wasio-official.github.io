@@ -16,6 +16,9 @@
 /** 结果列表最多渲染多少条（超出的只提示、不渲染） */
 const MAX_RENDER = 300;
 
+/** 批量抓取试卷 JSON 时的并发上限 */
+const FETCH_CONCURRENCY = 8;
+
 /** 级联层数（与数据里的 levels 保持一致） */
 const LEVELS = 4;
 
@@ -38,6 +41,9 @@ const state = {
 
   // 搜索索引：全部题目的扁平清单（含路径 / 试卷名 / 检索串）
   items: null,
+
+  // 请求序号：用于丢弃「用户已改选择后才返回」的过期结果
+  seq: 0,
 };
 
 /* ---------------------------------------------- 基础工具 */
@@ -163,20 +169,37 @@ async function fetchItems(refs) {
   }
 
   const found = new Map();
-  for (const [slug, qids] of byPaper) {
-    try {
-      const paper = await paperJson(slug);
-      const qmap = new Map();
-      (paper.questions || []).forEach((q) => qmap.set(String(q.id), q));
-      for (const qid of qids) {
-        found.set(refKey(slug, qid), makeItem(slug, qid, qmap.get(qid)));
+
+  // 一次检索可能横跨上百张试卷（如「简谐振动」命中 203 题 / 106 卷），
+  // 逐张串行会慢到用户以为卡死。这里限制并发数并行拉取，
+  // 既快又不至于一次性打出上百个请求。
+  const slugs = [...byPaper.keys()];
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < slugs.length) {
+      const slug = slugs[cursor++];
+      const qids = byPaper.get(slug);
+      try {
+        const paper = await paperJson(slug);
+        const qmap = new Map();
+        (paper.questions || []).forEach((q) => qmap.set(String(q.id), q));
+        for (const qid of qids) {
+          found.set(refKey(slug, qid), makeItem(slug, qid, qmap.get(qid)));
+        }
+      } catch (err) {
+        // 单张试卷取不到不影响整体，降级成只有题号的条目
+        for (const qid of qids) found.set(refKey(slug, qid), makeItem(slug, qid, null));
+        console.warn("试卷加载失败，已降级展示：", slug, err);
       }
-    } catch (err) {
-      // 单张试卷取不到不影响整体，降级成只有题号的条目
-      for (const qid of qids) found.set(refKey(slug, qid), makeItem(slug, qid, null));
-      console.warn("试卷加载失败，已降级展示：", slug, err);
     }
   }
+
+  const workers = Array.from(
+    { length: Math.min(FETCH_CONCURRENCY, slugs.length) },
+    () => worker()
+  );
+  await Promise.all(workers);
 
   return refs.map(([slug, qid]) => found.get(refKey(slug, qid))).filter(Boolean);
 }
@@ -316,7 +339,13 @@ async function applyFiltered(q) {
   const fallbackAll = !state.path.length;
   const refKeys = refs ? new Set(refs.map(([slug, qid]) => refKey(slug, qid))) : null;
 
+  // 记下这次请求的序号：加载是异步的，若用户已经改了选择，
+  // 旧结果返回时就不该再覆盖新结果。
+  const seq = ++state.seq;
+
   line.textContent = q ? "正在检索…" : "正在加载题目…";
+  // 一次可能横跨上百张试卷，先给个加载态，避免看起来像卡住
+  list.innerHTML = `<div class="loading"><div class="spinner"></div>正在加载题目…</div>`;
 
   try {
     let hits = [];
@@ -349,6 +378,9 @@ async function applyFiltered(q) {
       });
     }
 
+    // 期间用户又改了选择，这次的结果已经过期，直接丢弃
+    if (seq !== state.seq) return;
+
     // 补齐全卷名（标签数据里的名字可能缺失）
     shown.forEach((it) => { if (!it.paper) it.paper = paperName(it.p); });
 
@@ -360,6 +392,8 @@ async function applyFiltered(q) {
       );
     }
   } catch (err) {
+    // 过期请求的报错也不必显示
+    if (seq !== state.seq) return;
     line.textContent = "加载失败";
     list.innerHTML = `<div class="empty"><strong>数据加载失败</strong>${esc(err.message)}</div>`;
     console.error(err);
