@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>考点导航 — 物理竞赛题库</title>
+<link rel="stylesheet" href="assets/app.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f6fd0'/%3E%3Ctext x='16' y='23' font-size='19' font-family='serif' fill='white' text-anchor='middle'%3E%CE%A6%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-inner"></div></header>
+
+<main class="wrap">
+
+  <section class="page-head">
+    <h1>考点导航</h1>
+    <p class="page-desc">
+      按「一级 → 二级 → 三级 → 四级」考点逐级收窄，跨试卷汇总该考点下的全部题目；
+      也可以直接用关键词检索考点或试卷名。
+    </p>
+  </section>
+
+  <div class="toolbar" id="search">
+    <label class="search">
+      <input id="f-q" type="search" placeholder="搜索考点或试卷名…" autocomplete="off">
+    </label>
+    <div class="cascade">
+      <select class="ctl" id="f-l1" aria-label="一级考点"></select>
+      <select class="ctl" id="f-l2" aria-label="二级考点" disabled></select>
+      <select class="ctl" id="f-l3" aria-label="三级考点" disabled></select>
+      <select class="ctl" id="f-l4" aria-label="四级考点" disabled></select>
+      <button class="ctl ctl-btn" id="f-reset" type="button">重置</button>
+    </div>
+  </div>
+
+  <div id="crumb-path" class="crumb-path"></div>
+
+  <p class="result-line" id="result-line"></p>
+
+  <div class="q-list" id="q-list">
+    <div class="loading">
+      <div class="spinner"></div>
+      正在加载考点数据…
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  物理竞赛题库 · 内容来自个人整理的竞赛试卷资料，仅供学习交流使用。
+</footer>
+
+<script src="assets/app.js"></script>
+<script src="assets/tags.js"></script>
+</body>
+</html>

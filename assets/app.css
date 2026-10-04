@@ -60,7 +60,8 @@ a:hover { text-decoration: underline; }
 
 .hero-center {
   text-align: center;
-  max-width: 660px;
+  /* 三个入口按钮并排需要更宽一点的容器（原来是 660px） */
+  max-width: 760px;
   width: 100%;
   padding: 44px 36px 38px;
 }
@@ -70,7 +71,8 @@ a:hover { text-decoration: underline; }
 
 .landing-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* 三个入口按钮并排；容器放不下时自动折行，不必手改列数。 */
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-top: 26px;
 }
@@ -801,4 +803,115 @@ select.ctl:focus {
   .topbar, .toolbar, .q-nav, .footer, .lock-badge, .caret { display: none !important; }
   .panel.collapsible .panel-body { display: block !important; }
   .panel, .hero, .paper-head, .q-head { box-shadow: none; break-inside: avoid; }
+}
+
+/* ---------------------------------------------------------- 顶栏页面入口 */
+
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.topnav a {
+  padding: 5px 11px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  transition: background 0.16s, color 0.16s;
+}
+
+.topnav a:hover {
+  background: var(--bg-subtle);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.topnav a.is-active {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------- 考点导航 */
+
+/* 四级级联下拉：与搜索框同排，窄屏自动换行 */
+.cascade {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cascade .ctl { min-width: 126px; max-width: 190px; }
+
+/* 重置按钮：复用 .ctl 的尺寸，但去掉下拉箭头 */
+.ctl-btn {
+  padding: 0 15px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color 0.16s, color 0.16s, background 0.16s;
+}
+
+.ctl-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+/* 当前考点路径：可点击回溯 */
+.crumb-path {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+  min-height: 24px;
+  font-size: 13.5px;
+}
+
+.crumb-path .crumb-label {
+  color: var(--ink-mute);
+  margin-right: 8px;
+}
+
+.crumb-path .crumb-step {
+  padding: 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-elev);
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.16s, background 0.16s;
+}
+
+.crumb-path .crumb-step:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* 结果被截断时的提示行 */
+.list-more {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-mute);
+}
+
+@media (max-width: 720px) {
+  /* 顶栏：入口与面包屑都要能收起，避免横向溢出 */
+  .topnav { margin-left: 0; }
+  .topnav a { padding: 4px 8px; font-size: 13.5px; }
+  .crumb { display: none; }
+
+  /* 级联下拉在窄屏改为两列，超出则继续换行 */
+  .cascade { width: 100%; }
+  .cascade .ctl { flex: 1 1 44%; min-width: 0; max-width: none; }
+  .cascade .ctl-btn { flex: 1 1 100%; }
 }

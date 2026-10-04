@@ -372,6 +372,21 @@ function setupCollapsible(root = document) {
 
 /* ---------------------------------------------- 顶栏 */
 
+/** 顶栏右侧的固定页面入口；当前页面对应项高亮 */
+function topNavHTML() {
+  const here = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+  const items = [
+    { label: "题库", href: "library.html" },
+    { label: "考点", href: "tags.html" },
+  ];
+  return `<nav class="topnav">${items
+    .map((it) => {
+      const active = here === it.href.toLowerCase() ? ' class="is-active"' : "";
+      return `<a href="${esc(it.href)}"${active}>${esc(it.label)}</a>`;
+    })
+    .join("")}</nav>`;
+}
+
 function renderTopbar(crumbs = []) {
   const bar = document.querySelector(".topbar-inner");
   if (!bar) return;
@@ -388,7 +403,7 @@ function renderTopbar(crumbs = []) {
       <span class="brand-mark">Φ</span>
       <span>物理竞赛题库</span>
     </a>
-    <span class="topbar-spacer"></span>
     ${parts ? `<span class="crumb">${parts}</span>` : ""}
+    ${topNavHTML()}
   `;
 }
