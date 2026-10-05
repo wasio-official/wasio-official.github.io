@@ -400,7 +400,7 @@ function renderTopbar(crumbs = []) {
 
   bar.innerHTML = `
     <a class="brand" href="index.html">
-      <span class="brand-mark">Φ</span>
+      <img class="brand-mark" src="assets/brand-mark.png" alt="" width="28" height="28">
       <span>物理竞赛题库</span>
     </a>
     ${parts ? `<span class="crumb">${parts}</span>` : ""}

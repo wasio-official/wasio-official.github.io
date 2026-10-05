@@ -160,13 +160,10 @@ a:hover { text-decoration: underline; }
 .brand-mark {
   width: 28px; height: 28px;
   border-radius: 7px;
-  background: linear-gradient(135deg, #2f6fd0, #5a9bf0);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 14px;
-  font-weight: 700;
+  /* 图标 PNG 自带蓝底圆角，这里不再叠背景渐变与文字样式 */
+  display: block;
   flex: none;
+  object-fit: contain;
 }
 
 .crumb {
