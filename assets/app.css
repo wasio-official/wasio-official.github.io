@@ -786,6 +786,9 @@ select.ctl:focus {
 
 .footer-line { margin: 0; }
 
+/* 单独的 B 站主页入口：与上方说明文字拉开一点距离 */
+.footer-bili { margin-top: 4px; }
+
 .footer a {
   color: var(--ink-soft);
   text-decoration: underline;
