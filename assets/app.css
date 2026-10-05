@@ -772,6 +772,33 @@ select.ctl:focus {
   line-height: 1.8;
 }
 
+/* 页脚品牌词标：本站作者标识 */
+.footer-brand {
+  display: block;
+  height: 22px;
+  width: auto;
+  margin-bottom: 10px;
+  /* 词标是深色字，浅灰页脚上对比略弱，降一点不透明度更协调 */
+  opacity: 0.75;
+}
+
+.footer-center .footer-brand { margin-left: auto; margin-right: auto; }
+
+.footer-line { margin: 0; }
+
+.footer a {
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 2px;
+  transition: color 0.16s, text-decoration-color 0.16s;
+}
+
+.footer a:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
 /* ---------------------------------------------------------- 响应式 */
 
 @media (max-width: 720px) {
