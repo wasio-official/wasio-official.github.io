@@ -400,8 +400,8 @@ function renderTopbar(crumbs = []) {
 
   bar.innerHTML = `
     <a class="brand" href="index.html">
-      <img class="brand-mark" src="assets/brand-mark.png" alt="" width="28" height="28">
-      <span>物理竞赛题库</span>
+      <img class="brand-word" src="assets/brand-word.png" alt="Wasio">
+      <span>Wasio的物理竞赛题库</span>
     </a>
     ${parts ? `<span class="crumb">${parts}</span>` : ""}
     ${topNavHTML()}

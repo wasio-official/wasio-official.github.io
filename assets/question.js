@@ -68,7 +68,7 @@ function renderQuestion() {
   const item = paper.questions[index];
   const total = paper.questions.length;
 
-  document.title = `${item.title} · ${paper.name} — 物理竞赛题库`;
+  document.title = `${item.title} · ${paper.name} — Wasio的物理竞赛题库`;
 
   // 面包屑
   renderTopbar([

@@ -157,11 +157,11 @@ a:hover { text-decoration: underline; }
 }
 .brand:hover { text-decoration: none; }
 
-.brand-mark {
-  width: 28px; height: 28px;
-  border-radius: 7px;
-  /* 图标 PNG 自带蓝底圆角，这里不再叠背景渐变与文字样式 */
+/* 顶栏词标：完整 WASIO 的横向 PNG，高度与文字对齐 */
+.brand-word {
   display: block;
+  height: 22px;
+  width: auto;
   flex: none;
   object-fit: contain;
 }
@@ -771,18 +771,6 @@ select.ctl:focus {
   color: var(--ink-mute);
   line-height: 1.8;
 }
-
-/* 页脚品牌词标：本站作者标识 */
-.footer-brand {
-  display: block;
-  height: 22px;
-  width: auto;
-  margin-bottom: 10px;
-  /* 词标是深色字，浅灰页脚上对比略弱，降一点不透明度更协调 */
-  opacity: 0.75;
-}
-
-.footer-center .footer-brand { margin-left: auto; margin-right: auto; }
 
 .footer-line { margin: 0; }
 

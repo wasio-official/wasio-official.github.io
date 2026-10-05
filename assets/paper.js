@@ -58,7 +58,7 @@ function apply() {
   try {
     const paper = await loadPaper(slug);
     state.paper = paper;
-    document.title = `${paper.name} — 物理竞赛题库`;
+    document.title = `${paper.name} — Wasio的物理竞赛题库`;
 
     const mix = {};
     paper.questions.forEach((it) => {
