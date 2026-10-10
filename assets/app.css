@@ -307,6 +307,35 @@ select.ctl:focus {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+/* 「随机一份」按钮：外观对齐 select.ctl，但行为是按钮 */
+.ctl-lucky {
+  height: 40px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  outline: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.ctl-lucky:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ctl-lucky:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.ctl-lucky:active:not(:disabled) { background: var(--accent-soft); }
+.ctl-lucky:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
 .btn {
   height: 40px;
   padding: 0 15px;

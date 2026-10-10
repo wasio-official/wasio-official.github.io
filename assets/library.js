@@ -8,6 +8,8 @@ const state = {
   q: "",
   category: "",
   sort: "year",
+  visible: [],        // 当前筛选后的试卷（「随机一份」的抽取范围）
+  lastRandom: "",     // 上次随到的 slug，避免连点两次跳到同一套
 };
 
 function difficultyMixHTML(mix) {
@@ -66,6 +68,9 @@ function apply() {
   };
   list = [...list].sort(sorters[state.sort] || sorters.year);
 
+  // 记下当前筛选结果，供「随机一份」使用（随机应只在可见范围内抽）
+  state.visible = list;
+
   const grid = document.getElementById("grid");
   const line = document.getElementById("result-line");
 
@@ -73,11 +78,46 @@ function apply() {
     ? `显示 ${list.length} / ${state.papers.length} 套试卷`
     : `共 ${state.papers.length} 套试卷`;
 
+  // 没有可抽的试卷时，随机按钮置灰，避免点了没反应
+  const lucky = document.getElementById("f-lucky");
+  if (lucky) {
+    lucky.disabled = list.length === 0;
+    lucky.title = list.length
+      ? `从当前 ${list.length} 套里随机打开一份`
+      : "当前筛选下没有可打开的试卷";
+  }
+
   grid.innerHTML = list.length
     ? list.map(paperCard).join("")
     : `<div class="empty" style="grid-column:1/-1">
          <strong>没有匹配的试卷</strong>换个关键词或清除筛选试试
        </div>`;
+}
+
+/**
+ * 随机打开一套试卷。
+ *
+ * 语义：从**当前筛选结果**里抽（若你在搜「力学」，就只从命中的试卷里抽），
+ * 而不是从全库 700+ 套里抽 —— 后者会让筛选形同虚设。
+ *
+ * 另外避免「连点两次跳到同一套」：那不像随机，像没反应。
+ * 只有 1 套可选时就不再避让（否则会永远抽不出来）。
+ */
+function openRandom() {
+  const pool = state.visible || [];
+  if (!pool.length) return;
+
+  let pick;
+  if (pool.length === 1) {
+    pick = pool[0];
+  } else {
+    do {
+      pick = pool[Math.floor(Math.random() * pool.length)];
+    } while (state.lastRandom && pick.slug === state.lastRandom);
+  }
+  state.lastRandom = pick.slug;
+
+  location.href = `paper.html?id=${encodeURIComponent(pick.slug)}`;
 }
 
 function initFilters() {
@@ -103,6 +143,7 @@ function initFilters() {
     state.sort = e.target.value;
     apply();
   });
+  document.getElementById("f-lucky").addEventListener("click", openRandom);
 }
 
 (async function main() {
