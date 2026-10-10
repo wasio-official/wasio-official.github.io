@@ -750,6 +750,9 @@ select.ctl:focus {
 }
 .empty strong { display: block; font-size: 16px; color: var(--ink-soft); margin-bottom: 6px; }
 
+/* 引导态里的补充提示（如「还可以再用难度收窄」），比正文更弱一级 */
+.empty-tip { display: inline-block; margin-top: 4px; font-size: 13.5px; color: var(--ink-mute); }
+
 .loading { text-align: center; padding: 60px; color: var(--ink-mute); }
 
 .spinner {
@@ -872,6 +875,31 @@ select.ctl:focus {
 
 .cascade .ctl { min-width: 126px; max-width: 190px; }
 
+/* 难度范围筛选：嵌在级联下拉之后、重置按钮之前。
+   与 .cascade 同样允许换行，窄屏不会横向溢出。 */
+.diff {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* 「难度」四个字的小标签，弱化处理，不抢下拉的视觉重心 */
+.diff-label {
+  font-size: 13px;
+  color: var(--ink-mute);
+  white-space: nowrap;
+}
+
+/* 连字符：上下限之间的「–」，纯装饰 */
+.diff-sep {
+  color: var(--ink-mute);
+  font-size: 13px;
+}
+
+/* 难度下拉比考点下拉窄一些（选项文本是「简单 1（243）」量级） */
+.diff .ctl-diff { min-width: 104px; max-width: 140px; }
+
 /* 重置按钮：复用 .ctl 的尺寸，但去掉下拉箭头 */
 .ctl-btn {
   padding: 0 15px;
@@ -939,4 +967,8 @@ select.ctl:focus {
   .cascade { width: 100%; }
   .cascade .ctl { flex: 1 1 44%; min-width: 0; max-width: none; }
   .cascade .ctl-btn { flex: 1 1 100%; }
+
+  /* 难度组同样占满一行，两个下拉各占一半，重置按钮仍在最后独占一行 */
+  .diff { width: 100%; }
+  .diff .ctl-diff { flex: 1 1 40%; min-width: 0; max-width: none; }
 }

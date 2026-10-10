@@ -33,6 +33,16 @@
       <select class="ctl" id="f-l2" aria-label="二级考点" disabled></select>
       <select class="ctl" id="f-l3" aria-label="三级考点" disabled></select>
       <select class="ctl" id="f-l4" aria-label="四级考点" disabled></select>
+
+      <!-- 难度范围筛选：与考点级联是「与」的关系，取交集。
+           选项由 tags.json 的 difficulty 动态填充，这里不写死刻度。 -->
+      <span class="diff" id="f-diff" hidden>
+        <span class="diff-label">难度</span>
+        <select class="ctl ctl-diff" id="f-dmin" aria-label="难度下限" hidden></select>
+        <span class="diff-sep" aria-hidden="true">–</span>
+        <select class="ctl ctl-diff" id="f-dmax" aria-label="难度上限" hidden></select>
+      </span>
+
       <button class="ctl ctl-btn" id="f-reset" type="button">重置</button>
     </div>
   </div>
