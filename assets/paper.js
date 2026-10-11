@@ -9,18 +9,21 @@ function questionItem(item, index, slug) {
   const tags = renderTags(item.tags, { empty: "未标注考点" });
 
   return `
-    <a class="q-link" href="question.html?p=${encodeURIComponent(slug)}&q=${encodeURIComponent(item.id)}">
-      <span class="q-num">${String(index + 1).padStart(2, "0")}</span>
-      <span class="q-body">
-        <span class="q-title-row">
-          <span class="q-title">${esc(item.title)}</span>
-          ${difficultyChip(item.difficulty)}
-          ${item.score && item.score.D ? `<span class="chip">难度 ${esc(item.score.D)}</span>` : ""}
+    <div class="q-row">
+      ${psCheckbox(slug, item.id)}
+      <a class="q-link" href="question.html?p=${encodeURIComponent(slug)}&q=${encodeURIComponent(item.id)}">
+        <span class="q-num">${String(index + 1).padStart(2, "0")}</span>
+        <span class="q-body">
+          <span class="q-title-row">
+            <span class="q-title">${esc(item.title)}</span>
+            ${difficultyChip(item.difficulty)}
+            ${item.score && item.score.D ? `<span class="chip">难度 ${esc(item.score.D)}</span>` : ""}
+          </span>
+          <span class="q-tags">${tags}</span>
         </span>
-        <span class="q-tags">${tags}</span>
-      </span>
-      <span class="q-arrow">›</span>
-    </a>`;
+        <span class="q-arrow">›</span>
+      </a>
+    </div>`;
 }
 
 function apply() {
@@ -43,6 +46,28 @@ function apply() {
   document.getElementById("q-list").innerHTML = list.length
     ? list.map((it, i) => `<div class="q-item">${questionItem(it, i, p.slug)}</div>`).join("")
     : `<div class="empty"><strong>没有匹配的题目</strong>换个关键词试试</div>`;
+}
+
+/** 供 paperset.js 回调用：选择变化后重画计数即可（勾选态由复选框自身维持） */
+function onSelectionChange() {
+  updateSelectAllLabel();
+}
+
+/**
+ * 整批变化（清空 / 导入）后由 paperset.js 调用：重画列表，
+ * 让每个复选框的勾选态与 selection 重新对齐。
+ */
+function repaintList() {
+  apply();
+  updateSelectAllLabel();
+}
+
+function updateSelectAllLabel() {
+  const btn = document.getElementById("f-selectall");
+  if (!btn || !state.paper) return;
+  const qs = state.paper.questions;
+  const all = qs.length > 0 && qs.every((it) => psHas(state.paper.slug, it.id));
+  btn.textContent = all ? "取消全选本卷" : "全选本卷";
 }
 
 (async function main() {
@@ -91,7 +116,25 @@ function apply() {
       apply();
     });
 
+    // ---- 选题：复选框走事件委托，全选按钮按本卷取反
+    psLoad();
+    psRenderBar();
+    psBindList(document.getElementById("q-list"), () => ({}));
+    document.getElementById("f-selectall").addEventListener("click", () => {
+      const qs = state.paper.questions;
+      const all = qs.length > 0 && qs.every((it) => psHas(state.paper.slug, it.id));
+      qs.forEach((it) => {
+        if (all) psRemove(state.paper.slug, it.id);
+        else psToggle(state.paper.slug, it.id, {
+          name: state.paper.name, title: it.title, difficulty: it.difficulty,
+        });
+      });
+      // 整批变化：由 psAfterBatch 负责重画列表与按钮文案
+      psAfterBatch();
+    });
+
     apply();
+    updateSelectAllLabel();
   } catch (err) {
     document.getElementById("q-list").innerHTML =
       `<div class="empty"><strong>试卷加载失败</strong>${esc(err.message)}

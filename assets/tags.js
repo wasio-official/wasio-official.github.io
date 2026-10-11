@@ -215,7 +215,13 @@ function questionItem(it) {
   // 外层是 <a>，内部不能再嵌套 <a>，因此试卷名只作为 chip 文本展示
   const paper = it.paper ? `<span class="chip chip-cat">${esc(it.paper)}</span>` : "";
 
+  // 复选框与链接并排（结构同 paper.js），避免嵌在 <a> 里导致
+  // 点勾选就跳走。psCheckbox 由 paperset.js 提供。
+  const box = typeof psCheckbox === "function" ? psCheckbox(it.p, it.q) : "";
+
   return `
+    <div class="q-row">
+    ${box}
     <a class="q-link" href="question.html?p=${encodeURIComponent(it.p)}&q=${encodeURIComponent(it.q)}">
       <span class="q-num">${esc(it.num)}</span>
       <span class="q-body">
@@ -227,7 +233,8 @@ function questionItem(it) {
         <span class="q-tags">${tags}</span>
       </span>
       <span class="q-arrow">›</span>
-    </a>`;
+    </a>
+    </div>`;
 }
 
 /** 隐藏用的占位模板（MathJax 不存在时用于跳过公式排版） */
@@ -243,14 +250,31 @@ function renderList(items) {
 
   if (!items.length) {
     list.innerHTML = `<div class="empty"><strong>没有匹配的题目</strong>换个考点或关键词试试</div>`;
+    state.byKey = new Map();
     return;
   }
+
+  // 记一份「p\u0001q -> 条目」的索引：勾选时 paperset.js 需要拿题目名 / 难度，
+  // 而它只知道 slug 和 qid（DOM 查询不可靠，slug 可能含特殊字符）。
+  state.byKey = new Map(items.map((it) => [`${it.p}\u0001${it.q}`, it]));
 
   list.innerHTML = items
     .map((it) => `<div class="q-item">${questionItem(it)}</div>`)
     .join("");
 
   typeset(list);
+}
+
+/* ---------------------------------------------- 选题联动（供 paperset.js 回调） */
+
+/** 单选：勾选态由复选框自己维持，这里只需刷新计数（paperset.js 已重画） */
+function onSelectionChange() {
+  /* 计数由 psRenderBar 负责，此处无需额外动作 */
+}
+
+/** 整批变化（清空 / 导入）后重画列表，让勾选态与选择重新对齐 */
+function repaintList() {
+  apply();
 }
 
 /* ---------------------------------------------- 增量加载单张试卷（带缓存） */
@@ -777,6 +801,21 @@ function initFilters() {
           ` 当前收录 ${esc(data.stats.questions)} 道题目、${esc(data.stats.tags)} 个考点。`
         );
       }
+    }
+
+    // 选题栏：先读已存的选择，再建界面，最后绑事件
+    if (typeof psLoad === "function") {
+      psLoad();
+      psRenderBar();
+      psBindList(document.getElementById("q-list"), (slug, qid) => {
+        // 展示信息优先从当前列表数据里取（有题目名），取不到就退回试卷名。
+        const rec = state.byKey && state.byKey.get(`${slug}\u0001${qid}`);
+        return {
+          name: (rec && rec.paper) || (state.nameMap && state.nameMap[slug]) || "",
+          title: (rec && rec.title) || "",
+          difficulty: (rec && rec.difficulty_value) ?? "",
+        };
+      });
     }
 
     // 难度下拉必须在 restoreFromURL 之前建好：还原时要往回填选中值

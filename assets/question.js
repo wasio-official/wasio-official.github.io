@@ -94,9 +94,18 @@ function renderQuestion() {
     <div class="card-meta">
       ${difficultyChip(item.difficulty)}
       ${item.score && item.score.D ? `<span class="chip">难度 ${esc(item.score.D)}</span>` : ""}
+      ${typeof psCheckbox === "function" ? psCheckbox(paper.slug, item.id, "加入出卷目录") : ""}
     </div>
     ${tags ? `<div class="q-tags">${tags}</div>` : ""}
   `;
+
+  // 单题页的复选框不在列表容器里，单独绑定一次
+  if (typeof psBindList === "function") {
+    psBindList(document.getElementById("q-head"), () => ({
+      name: paper.name, title: item.title, difficulty: item.difficulty,
+    }));
+  }
+  if (typeof psAfterChange === "function") psAfterChange();
 
   // 正文
   const parts = [];
@@ -199,6 +208,13 @@ function setupKeyboard() {
 
 (async function main() {
   renderTopbar([]);
+
+  // 选题栏要在任何 early-return 之前建好，否则出错时连栏都没有
+  if (typeof psLoad === "function") {
+    psLoad();
+    psRenderBar();
+  }
+
   const slug = getParam("p");
   const qid = getParam("q");
 

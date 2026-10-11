@@ -495,6 +495,136 @@ select.ctl:focus {
 }
 .q-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
 
+/* ---- 选题（出卷目录）---- */
+
+/* 复选框与题目链接并排；整行是一张卡片，所以 flex 放在 .q-row 上 */
+.q-row { display: flex; align-items: stretch; }
+.q-row .q-link { flex: 1; min-width: 0; }
+
+.ps-check-wrap {
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0 6px 0 16px;
+  cursor: pointer;
+}
+.ps-check {
+  width: 17px; height: 17px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+}
+
+/* 带说明文字时（单题页），框与文字并排 */
+.ps-check-text {
+  margin-left: 7px;
+  font-size: 13.5px;
+  color: var(--ink-mute);
+  white-space: nowrap;
+}
+.q-head .ps-check-wrap,
+.card-meta .ps-check-wrap {
+  padding: 0;
+  width: auto;
+  height: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.ps-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line, var(--line));
+  border-radius: var(--radius-sm);
+}
+.ps-count { font-size: 14px; color: var(--ink); margin-right: auto; }
+.ps-count b { font-variant-numeric: tabular-nums; font-size: 16px; }
+
+.ps-msg {
+  margin: 0 0 14px;
+  padding: 9px 14px;
+  font-size: 13.5px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elev);
+  border: 1px solid var(--line-strong);
+}
+.ps-msg.ok { color: var(--accent-ink); border-color: var(--accent); }
+.ps-msg.err { color: #b3261e; border-color: #e0a19c; }
+
+/* 卷头信息（可折叠） */
+.ps-meta {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.ps-meta > summary {
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--ink-mute);
+  user-select: none;
+}
+.ps-meta[open] > summary { margin-bottom: 10px; color: var(--ink); }
+
+.ps-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px 14px;
+  margin-bottom: 10px;
+}
+.ps-meta-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--ink-mute);
+}
+.ps-meta-grid input {
+  height: 36px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+.ps-meta-grid input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.ps-meta-checks {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.ps-meta-checks label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.ps-meta-checks input { accent-color: var(--accent); }
+
+.ps-meta-note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-mute);
+  line-height: 1.6;
+}
+
+/* 小屏：按钮换行，复选框略收紧 */
+@media (max-width: 720px) {
+  .ps-bar .ctl { flex: 1 1 auto; }
+  .ps-check-wrap { padding-left: 12px; }
+}
+
 .q-link {
   display: flex;
   gap: 14px;
