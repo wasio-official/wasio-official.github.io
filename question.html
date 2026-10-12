@@ -11,11 +11,17 @@
 <meta name="theme-color" content="#2f6fd0">
 <script>
   window.MathJax = {
+    // ⚠️ 这里**不要**写 loader 块。
+    // tex-chtml-full 这个构建已经把 boldsymbol / physics / bm / ams 等扩展
+    // 全部打包进去了，再写 loader 会让 MathJax 初始化直接失败
+    // （症状：window.MathJax.typesetPromise 不存在，全站公式一个都不渲染）。
+    // 实测三种组合：基础版+loader ✗、full版+loader ✗、full版不写loader ✓。
     tex: {
       inlineMath: [["\\(", "\\)"]],
       displayMath: [["\\[", "\\]"]],
       processEscapes: true,
-      packages: { "[+]": ["ams", "boldsymbol", "physics"] }
+      // 这些宏包在 full 构建里都有；「[+]」是「在默认集合上追加」的写法。
+      packages: { "[+]": ["ams", "boldsymbol", "physics", "bm"] }
     },
     options: {
       skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"],
@@ -25,7 +31,10 @@
     startup: { typeset: false }
   };
 </script>
-<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<!-- 必须用 tex-chtml-full：
+     基础版 tex-mml-chtml 不含 boldsymbol 扩展，\boldsymbol 会当未知命令
+     原样输出（渲染成纯文本 "boldsymbolB"），且**不报错**，很难发现。 -->
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"></script>
 </head>
 <body>
 
