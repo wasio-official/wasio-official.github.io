@@ -56,6 +56,10 @@ const state = {
   // 搜索索引：全部题目的扁平清单（含路径 / 试卷名 / 检索串）
   items: null,
 
+  // 拼音数据（来自 tags.json 的 pinyin）：{chars, segs}，供模糊搜索用。
+  // 缺失时（旧版 tags.json）模糊搜索自动退化为纯子串匹配，不报错。
+  pinyin: { chars: {}, segs: {} },
+
   // 请求序号：用于丢弃「用户已改选择后才返回」的过期结果
   seq: 0,
 };
@@ -411,17 +415,72 @@ async function buildSearchIndex() {
 }
 
 /**
- * 关键词匹配：题目的考点名（任一级）或试卷名包含关键词即算命中。
- * 多个关键词之间是「与」的关系。
+ * 关键词匹配 + 相关性排序。
+ *
+ * 与旧版（纯 includes 过滤、不排序）的区别：
+ *   1. 排序   旧版输入「能量守」命中 92 条却不排序，目标可能排第 63 位。
+ *             现在按匹配质量打分，精确/前缀命中排最前。
+ *   2. 同音字 旧版「霍耳效应」搜不到「霍尔效应」，现在经拼音归一能搜到。
+ *   3. 拼音   支持 guangshanyanshe / gsys 这类拼音与首字母检索。
+ *
+ * 匹配逻辑：每个 token 独立打分（token 之间是「与」），
+ * 题目得分 = 各 token 得分的和；按总分降序。
+ * 详细打分规则见 fuzzy.js 的 scoreSeg / scoreAsciiQuery。
  */
 function matchItems(list, q) {
   const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
   if (!tokens.length) return list;
 
-  return list.filter((it) => {
-    const fields = it.hay.split("\u0001");
-    return tokens.every((t) => fields.some((f) => f.includes(t)));
+  // 没有拼音数据（旧 tags.json）时退回旧的纯子串行为，保证兼容
+  const py = state.pinyin;
+  const hasPinyin = py && py.segs && Object.keys(py.segs).length > 0;
+
+  if (!hasPinyin || typeof window.Fuzzy === "undefined") {
+    return list.filter((it) => {
+      const fields = it.hay.split("\u0001");
+      return tokens.every((t) => fields.some((f) => f.includes(t)));
+    });
+  }
+
+  // 每个 token 先算出它在「标签段」维度的命中分数。
+  // 字段里既有考点名也有试卷名；试卷名按原文子串匹配即可。
+  const tokenScores = tokens.map((t) => {
+    const segHits = window.Fuzzy.matchSegs(t, py.segs, py.chars);
+    // 段 -> 分数，供逐题累加（避免每题重算整张表）
+    const bySeg = new Map();
+    for (const h of segHits) bySeg.set(h.seg, h.score);
+    return { token: t, bySeg };
   });
+
+  const scored = [];
+  for (const it of list) {
+    const fields = it.hay.split("\u0001");
+    let total = 0;
+    let allMatched = true;
+
+    for (const ts of tokenScores) {
+      let best = 0;
+      // a) 考点字段：用模糊匹配的段分数
+      for (const f of fields) {
+        const s = ts.bySeg.get(f);
+        if (s && s > best) best = s;
+      }
+      // b) 原文子串兜底：试卷名等不一定在 segs 里
+      if (best === 0) {
+        for (const f of fields) {
+          if (f.includes(ts.token)) { best = 200; break; }
+        }
+      }
+      if (best === 0) { allMatched = false; break; }
+      total += best;
+    }
+
+    if (allMatched) scored.push({ it, score: total });
+  }
+
+  // 分数高的在前；同分时保持稳定（Array.sort 在 V8 上已稳定）
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((s) => s.it);
 }
 
 /* ---------------------------------------------- 主流程 */
@@ -478,6 +537,9 @@ function apply() {
   // 未选考点且未搜索：只给引导，不全量渲染上千道题
   if (!state.path.length && !q) {
     document.getElementById("result-line").textContent = "";
+    // 这里也要清掉分布提示，否则从「搜了东西」切回空白态时会残留
+    const h = document.querySelector(".scope-hint");
+    if (h) h.remove();
     document.getElementById("q-list").innerHTML = GUIDE_HTML;
     return;
   }
@@ -543,6 +605,13 @@ async function applyFiltered(q) {
     const hasMore = total > shown.length;
 
     line.textContent = buildResultLine({ total, shown: shown.length, q, fallbackAll, hasMore });
+
+    // 命中考点跨多个分类时，在结果行下补一行分布提示。
+    // 注意：每次渲染前必须先清掉上一次留下的提示，否则会累积/残留。
+    const oldHint = document.querySelector(".scope-hint");
+    if (oldHint) oldHint.remove();
+    const hint = renderScopeHint(searchScopeInfo(q));
+    if (hint) line.insertAdjacentHTML("afterend", hint);
 
     // 纯搜索命中的条目还没加载题目详情，渲染前按试卷批量补齐
     const need = shown.filter((it) => !it.title).map((it) => [it.p, it.q]);
@@ -614,6 +683,72 @@ function buildResultLine({ total, shown, q, fallbackAll, hasMore }) {
     : `「${state.path.join(" › ")}」下命中 ${total} 题${suffix}`;
 
   return hasMore ? `${scope}，此处展示前 ${shown} 条` : scope;
+}
+
+/* ---------------------------------------------- 命中考点的分布提示 */
+
+/**
+ * 搜索时，统计「命中了哪些考点段」以及它们分布在哪些一级/二级分类下。
+ *
+ * 解决的问题：同名考点常散落在多个分类里。实测「多普勒效应」出现在 8 处
+ * （力学/运动学、光学/波动光学/干涉、近代物理/原子物理/激光冷却…），
+ * 用户搜到一堆题却看不出它们分属哪些体系。
+ *
+ * 返回 null 表示没有可展示的信息（没搜索、没拼音数据、或命中过于发散）。
+ */
+function searchScopeInfo(q) {
+  const py = state.pinyin;
+  if (!q || !py || !py.segs || typeof window.Fuzzy === "undefined") return null;
+
+  const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (tokens.length !== 1) return null;   // 多词时分布信息意义不大
+
+  let hits;
+  try {
+    hits = window.Fuzzy.matchSegs(tokens[0], py.segs, py.chars);
+  } catch (e) {
+    return null;
+  }
+  if (!hits.length) return null;
+
+  // 每个命中的段，找出它在标签树里的所有路径，取前两级作为「分类」
+  const branches = new Map();   // "一级/二级" -> Set(段)
+  const segSet = new Set(hits.map((h) => h.seg));
+  let pathCount = 0;
+
+  for (const path of Object.keys(state.index)) {
+    const segs = path.split("/");
+    const last = segs[segs.length - 1];
+    if (!segSet.has(last)) continue;
+    pathCount++;
+    const branch = segs.slice(0, 2).join(" › ");
+    if (!branches.has(branch)) branches.set(branch, new Set());
+    branches.get(branch).add(last);
+  }
+
+  // 只命中一个分类时不提示（没有「分布」可言）
+  if (branches.size <= 1) return null;
+  // 命中过散（如搜「力」）也不提示，否则列几十行没意义
+  if (branches.size > 12) {
+    return { tooMany: true, branchCount: branches.size, segCount: segSet.size };
+  }
+
+  const list = [...branches.entries()]
+    .map(([branch, segs]) => ({ branch, segs: [...segs] }))
+    .sort((a, b) => b.segs.length - a.segs.length || a.branch.localeCompare(b.branch));
+
+  return { list, branchCount: branches.size, segCount: segSet.size, pathCount };
+}
+
+/** 把 searchScopeInfo 的结果渲染成结果行下方的一行提示 */
+function renderScopeHint(info) {
+  if (!info || !info.list) return "";
+  const chips = info.list
+    .slice(0, 8)
+    .map((b) => `<span class="scope-chip">${esc(b.branch)}<b>${b.segs.length}</b></span>`)
+    .join("");
+  const more = info.list.length > 8 ? `<span class="scope-more">等 ${info.branchCount} 个分类</span>` : "";
+  return `<div class="scope-hint">该考点分布在 ${info.branchCount} 个分类下：${chips}${more}</div>`;
 }
 
 /* ---------------------------------------------- 难度下拉初始化 */
@@ -783,6 +918,10 @@ function initFilters() {
     state.index = data.index || {};
     // tags.json 自带 slug -> 试卷名 映射，避免再拉一遍 papers.json
     state.nameMap = data.papers || {};
+
+    // 拼音数据（模糊搜索用）。旧版 tags.json 可能没有这个键，
+    // 此时 matchItems 会自动退回纯子串匹配。
+    state.pinyin = data.pinyin || { chars: {}, segs: {} };
 
     // 难度刻度元数据（values / labels / hist / unit）全部来自数据
     const d = data.difficulty || {};
