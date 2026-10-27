@@ -49,9 +49,10 @@ const state = {
   q: "",               // 搜索关键词
 
   // 难度刻度元数据（来自 tags.json 的 difficulty），未加载前给一份保守默认值
-  diff: { values: [], labels: {}, hist: {}, unit: "" },
-  dmin: "",            // 难度下限（"" = 不限），字符串刻度
-  dmax: "",            // 难度上限（"" = 不限），字符串刻度
+  diff: { values: [], labels: {}, hist: {}, unit: "", texts: [], text_hist: {} },
+  dmin: "",            // 数值难度 D 下限（"" = 不限），字符串刻度
+  dmax: "",            // 数值难度 D 上限（"" = 不限），字符串刻度
+  dtext: "",           // 文字档位（简单/中等/中上/较难），"" = 不限
 
   // 搜索索引：全部题目的扁平清单（含路径 / 试卷名 / 检索串）
   items: null,
@@ -147,6 +148,35 @@ function filterByDifficulty(items) {
   return items.filter((it) => diffMatch(it.difficulty_value));
 }
 
+/* ---- 第二套维度：文字档位（difficulty）----
+   与数值 D 相互独立，可同时使用（交集）。
+
+   引用里的文字档位只存序号（1-based），这里用 state.diff.texts 还原成文字，
+   避免 6000+ 条引用逐条内联中文。 */
+
+/** 文字档位是否启用 */
+function textActive() {
+  return !!state.dtext && (state.diff.texts || []).includes(state.dtext);
+}
+
+/** 序号（引用第 4 位）→ 文字档位 */
+function textOfCode(code) {
+  const texts = state.diff.texts || [];
+  const i = Number(code) - 1;
+  return i >= 0 && i < texts.length ? texts[i] : "";
+}
+
+/** 单个文字档位是否命中当前选择 */
+function textMatch(text) {
+  if (!textActive()) return true;
+  return text === state.dtext;
+}
+
+/** 结果行里的文字档位描述 */
+function diffTextPhrase() {
+  return textActive() ? `档次 ${state.dtext}` : "";
+}
+
 /** 刻度的显示文本：有 label 用「简单 1」，没有就纯数字 */
 function diffLabel(v) {
   const s = String(v);
@@ -172,14 +202,20 @@ function diffPhrase() {
   const loRank = diffRank(lo);
   const hiRank = diffRank(hi);
 
+  let phrase = "";
   if (loRank >= 0 && hiRank >= 0) {
     // 单点区间写成「难度 2」，比「难度 2–2」自然
-    if (lo === hi) return `难度 ${diffLabel(lo)}`;
-    return `难度 ${diffLabel(lo)}–${diffLabel(hi)}`;
+    phrase = lo === hi ? `难度 ${diffLabel(lo)}` : `难度 ${diffLabel(lo)}–${diffLabel(hi)}`;
+  } else if (loRank >= 0) {
+    phrase = `难度 ≥${diffLabel(lo)}`;
+  } else if (hiRank >= 0) {
+    phrase = `难度 ≤${diffLabel(hi)}`;
   }
-  if (loRank >= 0) return `难度 ≥${diffLabel(lo)}`;
-  if (hiRank >= 0) return `难度 ≤${diffLabel(hi)}`;
-  return "";
+
+  // 两套维度可同时生效，拼成「难度 5–7、档次 中上」
+  const t = diffTextPhrase();
+  if (phrase && t) return `${phrase}、${t}`;
+  return phrase || t;
 }
 
 /** 路径 → 可点击的层级面包屑（层级为从深到浅的索引，如 [2, 1, 0]） */
@@ -196,8 +232,8 @@ function show(crumbs) {
 }
 
 /** 把题目引用数组去重（同一题在多个标签下可能重复出现）
-    引用格式是 [slug, 题号, 难度值?]（第三项可能缺省 = 未标注难度），
-    去重时要把难度一起带上，否则难度筛选会拿不到值。 */
+    引用格式是 [slug, 题号, 数值难度D?, 文字档位序号?]（后两项可能缺省），
+    去重时要把两个难度一起带上，否则难度筛选会拿不到值。 */
 function dedupeRefs(refs) {
   const seen = new Set();
   const out = [];
@@ -206,7 +242,10 @@ function dedupeRefs(refs) {
     const key = refKey(slug, qid);
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push(r.length > 2 ? [slug, qid, r[2]] : [slug, qid]);
+    const copy = [slug, qid];
+    if (r.length > 2) copy.push(r[2]);
+    if (r.length > 3) copy.push(r[3]);
+    out.push(copy);
   }
   return out;
 }
@@ -382,8 +421,14 @@ async function buildSearchIndex() {
       const key = refKey(slug, qid);
       let rec = byQ.get(key);
       if (!rec) {
-        // ref[2] 是难度值（可能缺省 = 未标注）
-        rec = { slug, qid, dv: ref.length > 2 ? ref[2] : null, names: new Set() };
+        // ref[2] 是数值难度 D、ref[3] 是文字档位序号（都可能缺省 = 未标注）
+        rec = {
+          slug,
+          qid,
+          dv: ref.length > 2 ? ref[2] : null,
+          dtext: ref.length > 3 ? textOfCode(ref[3]) : "",
+          names: new Set(),
+        };
         byQ.set(key, rec);
       }
       // 该路径的每一级名称都是这道题的检索词
@@ -405,8 +450,9 @@ async function buildSearchIndex() {
       title: "",
       tags: [],
       difficulty: "",
-      // 难度随索引下发，因此搜索时也能直接按难度过滤，无需先拉详情
+      // 两个难度随索引下发，因此搜索时也能直接按难度过滤，无需先拉详情
       difficulty_value: rec.dv === undefined ? null : rec.dv,
+      difficulty_text: rec.dtext || "",
     });
   }
 
@@ -559,6 +605,9 @@ async function applyFiltered(q) {
   const refKeys = refs ? new Set(refs.map((r) => refKey(r[0], r[1]))) : null;
 
   const useDiff = diffActive();
+  const useText = textActive();
+  // 任一维度启用就走「先过滤后取详情」的快路径
+  const useFilter = useDiff || useText;
 
   // 记下这次请求的序号：加载是异步的，若用户已经改了选择，
   // 旧结果返回时就不该再覆盖新结果。
@@ -582,17 +631,20 @@ async function applyFiltered(q) {
         : idx;
       hits = matchItems(base, q);
 
-      // 难度已在索引里，直接在对象上过滤，无需拉详情
+      // 两个难度维度都已在索引里，直接在对象上过滤，无需拉详情
       if (useDiff) hits = hits.filter((it) => diffMatch(it.difficulty_value));
+      if (useText) hits = hits.filter((it) => textMatch(it.difficulty_text));
     } else {
       // 未搜索：先在**引用层**按难度过滤，再只拉要渲染的那些详情。
       //
-      // 难度值随索引一起下发（引用的第三项），所以这里不必下载全部候选试卷
+      // 难度值随索引一起下发（引用的第三、四项），所以这里不必下载全部候选试卷
       // （最坏跨 600+ 张卷、十几 MB）。先过滤、后取详情，
       // 结果行里的总数依然取自全量，不是「前 300 条里的命中数」。
       const source = refs || allRefs();
-      const picked = useDiff ? source.filter((r) => diffMatch(r[2])) : source;
-      if (useDiff) {
+      const picked = useFilter
+        ? source.filter((r) => diffMatch(r[2]) && textMatch(textOfCode(r[3])))
+        : source;
+      if (useFilter) {
         totalOverride = picked.length;
         hits = await fetchItems(picked.slice(0, MAX_RENDER));
       } else {
@@ -662,8 +714,12 @@ function allRefs() {
       const key = refKey(slug, qid);
       if (seen.has(key)) continue;
       seen.add(key);
-      // 保留第三项（难度值），否则「不限考点 + 按难度筛选」会拿不到难度
-      out.push(ref.length > 2 ? [slug, qid, ref[2]] : [slug, qid]);
+      // 保留第三、四项（数值难度 D / 文字档位序号），
+      // 否则「不限考点 + 按难度筛选」会拿不到难度
+      const copy = [slug, qid];
+      if (ref.length > 2) copy.push(ref[2]);
+      if (ref.length > 3) copy.push(ref[3]);
+      out.push(copy);
     }
   }
   return out;
@@ -779,6 +835,46 @@ function initDiffSelects() {
   smin.hidden = false;
   smax.hidden = false;
   syncDiffSelects();
+  initTextSelect();
+}
+
+/* ---- 文字档位下拉（第二套维度）---- */
+
+/** 用 difficulty.texts 填充「档次」下拉；无数据时保持隐藏 */
+function initTextSelect() {
+  const sel = document.getElementById("f-dtext");
+  if (!sel) return;
+  const texts = Array.isArray(state.diff.texts) ? state.diff.texts : [];
+  if (!texts.length) return;   // 老数据：保持 hidden（HTML 上默认 hidden）
+
+  const hist = state.diff.text_hist || {};
+  const opts = texts
+    .map((t) => {
+      const n = hist[t];
+      const label = Number.isFinite(Number(n)) ? `${t}（${n}）` : t;
+      return `<option value="${esc(t)}">${esc(label)}</option>`;
+    })
+    .join("");
+  sel.innerHTML = `<option value="">不限</option>${opts}`;
+  sel.hidden = false;
+  // 外层 span 默认 hidden，数据齐全才一起显形
+  const wrap = document.getElementById("f-dtext-wrap");
+  if (wrap) wrap.hidden = false;
+  syncTextSelect();
+}
+
+/** 把 state.dtext 写回「档次」下拉 */
+function syncTextSelect() {
+  const sel = document.getElementById("f-dtext");
+  if (!sel) return;
+  sel.value = textActive() ? state.dtext : "";
+}
+
+/** 改动「档次」下拉 */
+function selectText(value) {
+  state.dtext = (state.diff.texts || []).includes(value) ? value : "";
+  syncTextSelect();
+  apply();
 }
 
 /** 把 state.dmin / state.dmax 写回两个下拉（下拉不存在时静默跳过） */
@@ -799,6 +895,8 @@ function syncURL() {
   // 难度上下限：只在选了合法刻度时才写进 URL
   if (selectedMin() !== "") params.set("dmin", selectedMin());
   if (selectedMax() !== "") params.set("dmax", selectedMax());
+  // 文字档位
+  if (textActive()) params.set("dt", state.dtext);
   const query = params.toString();
   history.replaceState(null, "", query ? `?${query}` : location.pathname);
 }
@@ -809,6 +907,7 @@ function restoreFromURL() {
   const q = (getParam("q") || "").trim();
   const dmin = (getParam("dmin") || "").trim();
   const dmax = (getParam("dmax") || "").trim();
+  const dt = (getParam("dt") || "").trim();
 
   if (t) {
     const names = t.split("/");
@@ -830,6 +929,8 @@ function restoreFromURL() {
   const d2 = dv(dmax);
   if (d1 && diffRank(d1) >= 0) state.dmin = d1;
   if (d2 && diffRank(d2) >= 0) state.dmax = d2;
+  // 文字档位：必须在 difficulty.texts 里才认
+  if (dt && (state.diff.texts || []).includes(dt)) state.dtext = dt;
   // URL 里若写反了（dmin>dmax），纠正成合法区间，避免筛出莫名其妙的空结果
   normalizeDiffRange();
 }
@@ -870,14 +971,22 @@ function initFilters() {
     });
   }
 
+  // 文字档位（第二套维度）
+  const dtext = document.getElementById("f-dtext");
+  if (dtext) {
+    dtext.addEventListener("change", (e) => selectText(e.target.value || ""));
+  }
+
   document.getElementById("f-reset").addEventListener("click", () => {
     state.path = [];
     state.q = "";
     state.dmin = "";
     state.dmax = "";
+    state.dtext = "";
     input.value = "";
     syncSelects();
     syncDiffSelects();
+    syncTextSelect();
     apply();
     input.focus();
   });
@@ -930,6 +1039,9 @@ function initFilters() {
       labels: d.labels || {},
       hist: d.hist || {},
       unit: d.unit || "",
+      // 第二套维度：文字档位（顺序即由易到难）
+      texts: Array.isArray(d.texts) ? d.texts.map(String) : [],
+      text_hist: d.text_hist || {},
     };
 
     if (data.stats) {
@@ -962,6 +1074,7 @@ function initFilters() {
     restoreFromURL();
     syncSelects();
     syncDiffSelects();
+    syncTextSelect();
     initFilters();
     apply();
   } catch (err) {

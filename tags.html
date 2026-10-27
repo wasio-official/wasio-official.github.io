@@ -34,13 +34,20 @@
       <select class="ctl" id="f-l3" aria-label="三级考点" disabled></select>
       <select class="ctl" id="f-l4" aria-label="四级考点" disabled></select>
 
-      <!-- 难度范围筛选：与考点级联是「与」的关系，取交集。
-           选项由 tags.json 的 difficulty 动态填充，这里不写死刻度。 -->
+      <!-- 两个难度维度，互相独立、可同时生效（交集）：
+           ① 数值难度 D（0–8）：区间筛选，选项由 difficulty.values 动态填充
+           ② 文字档位（简单/中等/中上/较难）：单选，由 difficulty.texts 填充
+           两者都不写死刻度，改 build.py 的 DIFFICULTY 即可整体调整。 -->
       <span class="diff" id="f-diff" hidden>
-        <span class="diff-label">难度</span>
+        <span class="diff-label">难度 D</span>
         <select class="ctl ctl-diff" id="f-dmin" aria-label="难度下限" hidden></select>
         <span class="diff-sep" aria-hidden="true">–</span>
         <select class="ctl ctl-diff" id="f-dmax" aria-label="难度上限" hidden></select>
+      </span>
+
+      <span class="diff" id="f-dtext-wrap" hidden>
+        <span class="diff-label">档次</span>
+        <select class="ctl ctl-diff" id="f-dtext" aria-label="难度档次" hidden></select>
       </span>
 
       <button class="ctl ctl-btn" id="f-reset" type="button">重置</button>

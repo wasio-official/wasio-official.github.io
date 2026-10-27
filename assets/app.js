@@ -155,13 +155,25 @@ const PAPER_TAGS_CONFIG = {
   search: true, // 是否让试卷标签参与题库页搜索（字段为空时无影响）
 };
 
-/* ---------------------------------------------- 难度徽标 */
+/* ---------------------------------------------- 难度徽标
+
+   现在难度是两个独立维度，同时显示：
+     difficulty     文字档位（简单/中等/中上/较难）—— 本函数渲染
+     score.D        数值难度 0–8                    —— 调用方另加一个 chip
+   ---------------------------------------------- */
 
 function difficultyChip(level) {
-  const map = { 简单: "chip-easy", 中等: "chip-mid", 较难: "chip-hard" };
+  // 中上：介于中等与较难之间，用 between 色（见 app.css 的 .chip-midup）
+  const map = { 简单: "chip-easy", 中等: "chip-mid", 中上: "chip-midup", 较难: "chip-hard" };
   if (!level) return "";
   const cls = map[level] || "";
   return `<span class="chip ${cls}">${esc(level)}</span>`;
+}
+
+/** 数值难度 D 的徽标（0–8；区间写法如 "6-7" 原样显示） */
+function difficultyD(value) {
+  if (value === null || value === undefined || value === "") return "";
+  return `<span class="chip chip-d" title="数值难度 D（0–8）">D ${esc(value)}</span>`;
 }
 
 /* ---------------------------------------------- Markdown 渲染

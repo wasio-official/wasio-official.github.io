@@ -473,7 +473,15 @@ select.ctl:focus {
 .chip-cat { background: var(--accent-soft); color: var(--accent-ink); }
 .chip-easy { background: var(--easy-bg); color: var(--easy); }
 .chip-mid { background: var(--mid-bg); color: var(--mid); }
+/* 中上：介于中等与较难之间，取橙红过渡色 */
+.chip-midup { background: #fdefe4; color: #b8621f; }
 .chip-hard { background: var(--hard-bg); color: var(--hard); }
+/* 数值难度 D（0–8）：中性色，与上面四个档位色区分开 */
+.chip-d {
+  background: var(--bg-subtle);
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
 
 .tag {
   display: inline-flex;
