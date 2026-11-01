@@ -185,20 +185,62 @@ function difficultyD(value) {
 
 const MATH_STASH = [];
 
+/** s[i] 是否被反斜杠转义：前面连续反斜杠个数为奇数即视为转义。
+   （用奇偶判断，而不是只看前一个字符，`\\$` 这种「转义的反斜杠 + 美元」
+   才不会被误当成转义美元。） */
+function isEscaped(s, i) {
+  let n = 0;
+  for (let j = i - 1; j >= 0 && s[j] === "\\"; j--) n++;
+  return n % 2 === 1;
+}
+
+/**
+ * 抽出 $...$ 行内公式，换成占位符。
+ *
+ * ⚠️ 这里**必须**手工扫描，不能用带后行断言（lookbehind）的正则。
+ * 旧实现靠 lookbehind 排除「被反斜杠转义的 $」；lookbehind 在
+ * Safari / iOS < 16.4、旧 Android WebView 上不被支持，会让**整个 app.js
+ * 解析失败**（SyntaxError）→ 站点纯白屏且没有任何提示。
+ * 手工扫描语义与旧实现一致：成对、未被转义、不跨行的 $ 才算公式；
+ * 转义判断用反斜杠的奇偶（见 isEscaped）。
+ */
+function stashInlineMath(text) {
+  let out = "";
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === "$" && !isEscaped(text, i)) {
+      let j = i + 1;
+      let end = -1;
+      while (j < text.length) {
+        const c = text[j];
+        if (c === "\n") break; // 公式不跨行
+        if (c === "$" && !isEscaped(text, j)) { end = j; break; }
+        j++;
+      }
+      // 公式体必须非空，等价于原正则里的 [^$\n]+?
+      if (end > i + 1) {
+        MATH_STASH.push({ display: false, body: text.slice(i + 1, end) });
+        out += `\u0000M${MATH_STASH.length - 1}\u0000`;
+        i = end + 1;
+        continue;
+      }
+    }
+    out += text[i];
+    i++;
+  }
+  return out;
+}
+
 /** 把 $...$ / $$...$$ 抽出来占位，避免被 Markdown 规则破坏 */
 function stashMath(text) {
   MATH_STASH.length = 0;
-  // 块级公式优先
-  let out = text.replace(/\$\$([\s\S]+?)\$\$/g, (_, body) => {
+  // 块级公式优先（$$...$$，可以跨行）
+  const out = text.replace(/\$\$([\s\S]+?)\$\$/g, (_, body) => {
     MATH_STASH.push({ display: true, body });
     return `\u0000M${MATH_STASH.length - 1}\u0000`;
   });
-  // 行内公式（避免跨越空行）
-  out = out.replace(/(?<!\\)\$([^$\n]+?)(?<!\\)\$/g, (_, body) => {
-    MATH_STASH.push({ display: false, body });
-    return `\u0000M${MATH_STASH.length - 1}\u0000`;
-  });
-  return out;
+  // 行内公式（不跨行）
+  return stashInlineMath(out);
 }
 
 function unstashMath(html) {
@@ -217,7 +259,13 @@ function inlineMd(s) {
   return s
     .replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`)
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/(?<![*\w])\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>")
+    // 斜体：原实现用后行断言排除「前导是 * 或单词字符」的情况（见上，老浏览器不支持）；
+    // 现在把「前导字符」一起捕获、再在回调里原样还回去，语义等价。
+    // 末尾「后面不能再是 *」用的是**前瞻**（lookahead），兼容性没问题，保留。
+    .replace(
+      /(^|[^*\w])\*([^*\n]+)\*(?!\*)/g,
+      (m, pre, body) => pre + "<em>" + body + "</em>"
+    )
     .replace(/__([^_]+)__/g, "<strong>$1</strong>");
 }
 
