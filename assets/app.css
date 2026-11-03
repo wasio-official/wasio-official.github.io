@@ -984,6 +984,13 @@ select.ctl:focus {
 }
 .footer-visits[hidden] { display: none; }
 
+/* 版本号：footer 最后一行，由 app.js 从 assets/version.js 填入 */
+.footer-ver {
+  color: var(--ink-mute);
+  font-size: 12px;
+}
+.footer-ver[hidden] { display: none; }
+
 .footer a {
   color: var(--ink-soft);
   text-decoration: underline;

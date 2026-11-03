@@ -467,3 +467,21 @@ function renderTopbar(crumbs = []) {
     ${topNavHTML()}
   `;
 }
+
+/* ---------------------------------------------- 版本号 */
+
+// 版本号：来自 assets/version.js（由 publish.py 从 VERSION 生成）
+function initVersion() {
+  const el = document.getElementById("site-ver");
+  if (!el || typeof window.SITE_VERSION === "undefined") return;
+  el.textContent = "v" + window.SITE_VERSION;
+  el.hidden = false;
+}
+
+// app.js 在各页面 </body> 前加载（此时 DOM 已解析），这里统一在
+// DOM ready 时调用一次；避免元素缺失时报错，也不重复绑定。
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initVersion, { once: true });
+} else {
+  initVersion();
+}
