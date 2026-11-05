@@ -142,18 +142,62 @@ function psItems() {
 
 /* ---------------------------------------------- 导出 / 导入 */
 
+/** 本地日期 YYYY-MM-DD（用于自动卷名） */
+function psDateISO(d = new Date()) {
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** 本地日期 YYYYMMDD（用于文件名） */
+function psDateCompact(d = new Date()) {
+  return psDateISO(d).replace(/-/g, "");
+}
+
+/** 用户填的标题；控件不在页面上时回退到 localStorage 里的卷头 */
+function psTitleValue() {
+  const el = document.getElementById("ps-title");
+  if (el) return String(el.value || "").trim();
+  const m = psLoad._meta || {};
+  return String(m.title || "").trim();
+}
+
+/** 未填标题时的自动卷名 */
+function psAutoName(n = psCount()) {
+  return `物理竞赛组卷·${psDateISO()}·${n || 0}题`;
+}
+
+/** 当前组卷名：有标题用标题，否则用自动名 */
+function psCurrentName(n = psCount()) {
+  return psTitleValue() || psAutoName(n);
+}
+
+/** 去掉 Windows / macOS / Linux 文件名非法字符 */
+function psSafeFilename(s) {
+  return String(s || "")
+    .replace(/[\\/:*?"<>|\r\n\t]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\.+$/, "");
+}
+
 function psDownload(filename) {
+  const n = psCount();
+  const title = psTitleValue();
+  const name = title || psAutoName(n);
+  const exportedAt = new Date().toISOString();
   const payload = {
     format: PAPERSET_FORMAT,
     version: PAPERSET_VERSION,
-    exported_at: new Date().toISOString(),
+    exported_at: exportedAt,
     site: location.origin + location.pathname.replace(/[^/]*$/, ""),
     meta: {
-      title: (document.getElementById("ps-title") || {}).value || "",
+      title: name,
       subtitle: (document.getElementById("ps-subtitle") || {}).value || "",
       duration: Number((document.getElementById("ps-duration") || {}).value) || 0,
       one_per_page: !!((document.getElementById("ps-oneperpage") || {}).checked),
       show_analysis: !!((document.getElementById("ps-analysis") || {}).checked),
+      itemCount: n,
+      exportedAt: exportedAt,
     },
     items: psItems().map((it, i) => ({
       paper: it.paper,
@@ -170,7 +214,12 @@ function psDownload(filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename || `paperset-${psStamp()}.json`;
+  // 组卷-<标题>-<YYYYMMDD>-<N>题.json；标题里的非法字符先剔掉。
+  // 没填标题时标题本身就是「物理竞赛组卷·日期·N题」，再拼日期会重复，故直接用自动名。
+  const autoNamed = !title;
+  a.download = filename || (autoNamed
+    ? `组卷-${psSafeFilename(name)}.json`
+    : `组卷-${psSafeFilename(name)}-${psDateCompact()}-${n}题.json`);
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -266,10 +315,12 @@ function psRenderBar() {
     analysis: (host.querySelector("#ps-analysis") || {}).checked,
   };
   const hadMeta = !!host.querySelector("#ps-title");
+  // 卷名：填了标题就用标题，留空则显示「物理竞赛组卷·日期·N题」
+  const currentName = psCurrentName(n);
 
   host.innerHTML = `
     <div class="ps-bar">
-      <span class="ps-count">已选 <b>${n}</b> 题</span>
+      <span class="ps-count">已选 <b>${n}</b> 题<span class="ps-name">组卷名：<b id="ps-name">${esc(currentName)}</b></span></span>
       <button class="ctl" id="ps-export" type="button" ${n ? "" : "disabled"}>导选出卷目录</button>
       <button class="ctl" id="ps-import-btn" type="button">导入目录</button>
       <button class="ctl" id="ps-clear" type="button" ${n ? "" : "disabled"}>清空</button>
@@ -279,10 +330,11 @@ function psRenderBar() {
     <details class="ps-meta" ${n ? "" : "open"}>
       <summary>卷头信息（导出时一并带上，本地出卷工具会用）</summary>
       <div class="ps-meta-grid">
-        <label>试卷标题<input id="ps-title" type="text" placeholder="物理竞赛模拟卷 1"></label>
+        <label>试卷标题<input id="ps-title" type="text" placeholder="例：物理竞赛组卷·力学专项"></label>
         <label>副标题<input id="ps-subtitle" type="text" placeholder="力学专题"></label>
         <label>考试时长（分钟）<input id="ps-duration" type="number" min="0" step="5" placeholder="180"></label>
       </div>
+      <p class="ps-meta-note ps-title-hint">留空则自动命名为「物理竞赛组卷·日期·N题」。</p>
       <div class="ps-meta-checks">
         <label><input id="ps-oneperpage" type="checkbox"> 每页一道题</label>
         <label><input id="ps-analysis" type="checkbox"> 含解析与答案</label>
@@ -323,6 +375,15 @@ function psRenderBar() {
     el.addEventListener("change", psMetaSave);
     if (el.type === "text" || el.type === "number") el.addEventListener("input", psMetaSave);
   });
+
+  // 标题一改，工具条上的「组卷名」立即跟着变（留空则显示自动名）
+  const titleEl = host.querySelector("#ps-title");
+  const nameEl = host.querySelector("#ps-name");
+  if (titleEl && nameEl) {
+    const refreshName = () => { nameEl.textContent = psCurrentName(); };
+    titleEl.addEventListener("input", refreshName);
+    titleEl.addEventListener("change", refreshName);
+  }
 
   host.querySelector("#ps-export").addEventListener("click", () => psDownload());
   host.querySelector("#ps-clear").addEventListener("click", () => {

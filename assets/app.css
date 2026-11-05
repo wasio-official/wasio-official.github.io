@@ -580,6 +580,8 @@ select.ctl:focus {
 }
 .ps-count { font-size: 14px; color: var(--ink); margin-right: auto; }
 .ps-count b { font-variant-numeric: tabular-nums; font-size: 16px; }
+.ps-name { margin-left: 10px; font-size: 13px; color: var(--ink-mute); }
+.ps-name b { font-size: 13px; color: var(--accent-ink); font-weight: 600; }
 
 .ps-msg {
   margin: 0 0 14px;

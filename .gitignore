@@ -1,0 +1,5 @@
+# 工具运行产物（本地或 Actions 里跑 tools/pdfgen.py 时都会生成，不该入库）
+__pycache__/
+*.pyc
+out/
+papersets/work/

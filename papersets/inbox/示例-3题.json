@@ -1,0 +1,38 @@
+{
+  "format": "wasio-paperset",
+  "version": 1,
+  "exported_at": "2026-11-05T08:00:00+08:00",
+  "site": "https://wasio-official.github.io",
+  "meta": {
+    "title": "示例·三题",
+    "subtitle": "线上出卷示例（跨 2 套卷，3 道题）",
+    "duration": 120,
+    "one_per_page": false,
+    "show_analysis": true,
+    "itemCount": 3,
+    "exportedAt": "2026-11-05T08:00:00+08:00"
+  },
+  "items": [
+    {
+      "paper": "2023-cbd271ff",
+      "qid": "1",
+      "order": 1,
+      "score": 40,
+      "note": ""
+    },
+    {
+      "paper": "2023-cbd271ff",
+      "qid": "2",
+      "order": 2,
+      "score": 40,
+      "note": ""
+    },
+    {
+      "paper": "2019-b4-ca9bfe95",
+      "qid": "1",
+      "order": 3,
+      "score": 40,
+      "note": ""
+    }
+  ]
+}

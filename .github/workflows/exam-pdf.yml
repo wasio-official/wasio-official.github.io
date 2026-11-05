@@ -1,0 +1,216 @@
+name: 出卷 PDF
+
+# 触发方式（两种）：
+#   1) 本页 «Run workflow»：直接粘贴 paperset JSON（或留空，处理 papersets/inbox/*.json）
+#   2) push 到 papersets/inbox/*.json：把网站导出的 JSON 上传/提交到这里即自动出卷
+on:
+  workflow_dispatch:
+    inputs:
+      paperset_json:
+        description: 'paperset JSON 内容（留空则处理 papersets/inbox/*.json）'
+        required: false
+        type: string
+      mode:
+        description: '出哪几份：both / questions / answers'
+        required: false
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - questions
+          - answers
+  push:
+    paths:
+      - 'papersets/inbox/*.json'
+
+# 只读仓库；产物走 artifact，不写回仓库
+permissions:
+  contents: read
+
+jobs:
+  exam-pdf:
+    name: 组卷 → PDF
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        # ⚠ 仓库工作树约 430 MB（data/images 占 380 MB），全量检出约 1–2 分钟。
+        # 若觉得慢，可改成 sparse-checkout 只取 tools/ + data/ + papersets/：
+        #   with:
+        #     sparse-checkout: |
+        #       tools
+        #       data
+        #       papersets
+        #     sparse-checkout-cone-mode: true
+        # （sparse 时 .github/ 与根目录文件仍会被取到；papersets/ 必须保留。）
+
+      - name: 安装 TeX Live 与中文字体（带 apt 缓存）
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          # texlive-xetex       → xelatex
+          # texlive-lang-chinese→ ctex / xeCJK
+          # latex-extra         → adjustbox、needspace、newunicodechar 等
+          # fonts-noto-cjk      → Linux 上替代 MS Mincho 的符号回退字体
+          # poppler-utils       → pdfinfo（统计页数）
+          packages: >-
+            texlive-xetex texlive-lang-chinese texlive-latex-extra
+            texlive-latex-recommended texlive-fonts-recommended
+            texlive-science latexmk fonts-noto-cjk poppler-utils
+          version: 1.0
+
+      - name: 环境自检
+        # 只提示不阻断：缺 MS Mincho 会自动改用 Noto CJK，不是错误
+        run: |
+          python3 tools/pdfgen.py --check
+          echo "--- 关键 LaTeX 宏包 ---"
+          for sty in ctex.sty xeCJK.sty fontspec.sty adjustbox.sty tabularx.sty \
+                     wrapfig.sty needspace.sty lastpage.sty fancyhdr.sty newunicodechar.sty; do
+            path=$(kpsewhich "$sty" || true)
+            printf '%-20s %s\n' "$sty" "${path:-✗ 缺失（检查 apt 包）}"
+          done
+
+      - name: 写入粘贴的 paperset JSON
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.paperset_json != ''
+        env:
+          PAPERSET_JSON: ${{ github.event.inputs.paperset_json }}
+        run: |
+          set -euo pipefail
+          mkdir -p papersets/work
+          python3 - "$PAPERSET_JSON" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          raw = sys.argv[1]
+          try:
+              data = json.loads(raw)
+          except Exception as exc:
+              print(f"::error::粘贴的 JSON 解析失败：{exc}")
+              sys.exit(1)
+          if data.get("format") != "wasio-paperset":
+              print("::error::这不是本站导出的选题目录（format 不是 wasio-paperset）")
+              sys.exit(1)
+          pathlib.Path("papersets/work/input.json").write_text(raw, encoding="utf-8")
+          print(f"已接收粘贴的 JSON：{len(data.get('items') or [])} 题")
+          PY
+
+      - name: 收集待处理的 paperset
+        run: |
+          set -euo pipefail
+          mkdir -p papersets/work out
+          if [ -f papersets/work/input.json ]; then
+            printf '%s\n' "papersets/work/input.json" > papersets/work/list.txt
+          else
+            shopt -s nullglob
+            files=(papersets/inbox/*.json)
+            if [ ${#files[@]} -eq 0 ]; then
+              echo "::error::没有待处理的 paperset：papersets/inbox/ 里没有 .json，也没粘贴 JSON"
+              exit 1
+            fi
+            printf '%s\n' "${files[@]}" > papersets/work/list.txt
+          fi
+          echo "待处理 $(wc -l < papersets/work/list.txt) 个文件："
+          sed 's/^/  /' papersets/work/list.txt
+
+      - name: 生成 PDF
+        env:
+          MODE: ${{ github.event.inputs.mode }}
+        run: |
+          set +e            # 单个文件失败不中断其余文件，最后统一置失败
+          set -uo pipefail
+          mode="${MODE:-both}"
+          echo "模式：$mode"
+          fail=0
+          i=0
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            i=$((i + 1))
+            stem="$(basename "$f" .json)"
+            echo "::group::[$i] $f"
+            # 数据在仓库里，--offline 保证全程不联网；输出目录带序号避免同名覆盖
+            if python3 tools/pdfgen.py "$f" -o "out/${i}-${stem}" --mode "$mode" --offline; then
+              echo "✓ 完成：$f"
+            else
+              echo "::error::出卷失败：$f（日志见 artifact）"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done < papersets/work/list.txt
+          echo "共处理 $i 个 paperset，失败标记=$fail"
+          exit "$fail"
+
+      - name: 校验产物
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          count=$(find out -type f -name '*.pdf' | wc -l)
+          echo "PDF 数量：$count"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::没有生成任何 PDF"
+            exit 1
+          fi
+
+      - name: 写入出卷摘要
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import subprocess
+
+          out = pathlib.Path("out")
+          pdfs = sorted(out.rglob("*.pdf")) if out.is_dir() else []
+          lines = ["## 出卷完成", ""]
+          if not pdfs:
+              lines.append("> ⚠ 没有生成任何 PDF，失败原因见 artifact 里的 `.log`。")
+          else:
+              lines += ["| 文件 | 页数 | 大小 |", "|---|---|---|"]
+              for p in pdfs:
+                  pages = "?"
+                  try:
+                      info = subprocess.run(["pdfinfo", str(p)], capture_output=True,
+                                            text=True, timeout=60).stdout
+                      for line in info.splitlines():
+                          if line.startswith("Pages:"):
+                              pages = line.split(":", 1)[1].strip()
+                              break
+                  except Exception:
+                      pass
+                  size = p.stat().st_size
+                  size_txt = (f"{size / 1024 / 1024:.2f} MB" if size >= 1024 * 1024
+                              else f"{size / 1024:.0f} KB")
+                  lines.append(f"| `{p}` | {pages} | {size_txt} |")
+              lines += ["", f"共 {len(pdfs)} 个 PDF。artifact：`exam-pdf-"
+                        f"{os.environ.get('GITHUB_RUN_NUMBER', '')}`。"]
+          text = "\n".join(lines) + "\n"
+          print(text)
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a", encoding="utf-8") as fh:
+                  fh.write(text)
+          PY
+
+      - name: 上传 PDF（artifact）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exam-pdf-${{ github.run_number }}
+          path: out/**/*.pdf
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: 上传编译日志（失败时）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exam-pdf-logs-${{ github.run_number }}
+          # .log 用来定位 xelatex 报错；.tex 便于本地复现
+          path: |
+            out/**/*.log
+            out/**/*.tex
+          if-no-files-found: ignore
+          retention-days: 30
