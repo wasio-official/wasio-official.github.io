@@ -1186,3 +1186,112 @@ select.ctl:focus {
     white-space: nowrap;
   }
 }
+
+/* ---------------------------------------------------------- 出卷下载页 */
+
+/* 与题库页的卡片同风格，但一组卷子横向排开：左边信息、右边下载按钮 */
+.pdf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pdf-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 18px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.pdf-main { flex: 1; min-width: 0; }
+
+.pdf-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.pdf-title-row h3 {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 620;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+}
+
+.pdf-id {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--ink-mute);
+}
+
+.pdf-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+
+/* 下载按钮：复用 .btn 的尺寸与圆角，里面再加一行「页数 · 大小」小字 */
+.pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.pdf-btn .pdf-btn-meta {
+  font-size: 11.5px;
+  color: var(--ink-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 题卷是主产物，给主色；答案卷保持次要样式 */
+.pdf-btn-primary {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.pdf-btn-primary:hover {
+  color: #fff;
+  background: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+.pdf-btn-primary .pdf-btn-meta { color: rgba(255, 255, 255, 0.82); }
+
+/* 说明行里的路径代码（papersets/inbox/） */
+.page-desc code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-subtle);
+  font-size: 12.5px;
+}
+
+@media (max-width: 720px) {
+  .pdf-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .pdf-actions .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}

@@ -3,6 +3,10 @@ name: 出卷 PDF
 # 触发方式（两种）：
 #   1) 本页 «Run workflow»：直接粘贴 paperset JSON（或留空，处理 papersets/inbox/*.json）
 #   2) push 到 papersets/inbox/*.json：把网站导出的 JSON 上传/提交到这里即自动出卷
+#
+# ⚠ 防自激：下面的 push 触发**只**匹配 papersets/inbox/*.json，
+#   而本流程最后提交的是 pdfs/（PDF + index.json），不在 paths 里 → 不会再次触发。
+#   （理论上 GITHUB_TOKEN 推送也不会触发 workflow，这里是双保险；别放宽 paths。）
 on:
   workflow_dispatch:
     inputs:
@@ -23,9 +27,10 @@ on:
     paths:
       - 'papersets/inbox/*.json'
 
-# 只读仓库；产物走 artifact，不写回仓库
+# 需要写权限：出卷完成后要把 pdfs/ 提交回 main，让 Pages 当静态文件发布
+# （站点 pdfs.html 免登录下载）。只改 pdfs/，不碰题库数据。
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   exam-pdf:
@@ -223,6 +228,60 @@ jobs:
           path: out/**/*.pdf
           if-no-files-found: warn
           retention-days: 90
+
+      # ---------------------------------------------------------------- 发布到站点
+      # 把 out/ 里的 PDF 提交回仓库根的 pdfs/，由 GitHub Pages 当静态文件发布，
+      # 站点 pdfs.html 就能免登录直接下载（artifact 仍保留：要登录 GitHub 才能下）。
+      # 复杂逻辑（命名 / 索引合并 / 去重 / 30 组淘汰）在 Python 脚本里，
+      # 同一脚本本地能跑：python3 .github/scripts/publish_pdfs.py --help
+      - name: 发布到站点
+        if: always()
+        env:
+          MSG_FILE: ${{ runner.temp }}/pdf-commit-msg.txt
+        run: |
+          set -euo pipefail
+
+          publish() {
+            python3 .github/scripts/publish_pdfs.py \
+              --out out \
+              --dest pdfs \
+              --run-number "$GITHUB_RUN_NUMBER" \
+              --run-id "$GITHUB_RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --keep 30 \
+              --commit-msg-file "$MSG_FILE"
+          }
+
+          publish
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          msg="$(cat "$MSG_FILE")"
+
+          # 并发保护：推送失败就把「最新 main」拿过来，把本次结果重新合并进去再推。
+          # 为什么不用 git pull --rebase：checkout 默认 depth=1 的浅克隆，
+          # 本地提交的父提交是 graft 出来的根，rebase 找不到 merge base 会失败；
+          # 「重放」不需要历史 —— index.json 的合并由脚本在最新索引上重做一遍（幂等）。
+          for attempt in 1 2 3; do
+            git add pdfs/
+            if git diff --cached --quiet; then
+              echo "pdfs/ 没有需要提交的改动（本次结果已在索引里），结束"
+              exit 0
+            fi
+            git commit -m "$msg"
+            if git push origin HEAD:main; then
+              echo "已推送 pdfs/（第 $attempt 次尝试）"
+              exit 0
+            fi
+
+            echo "第 $attempt 次推送失败，取最新 main 后重试…"
+            git fetch --depth=1 origin main
+            git reset --mixed FETCH_HEAD                    # HEAD/索引对齐远端
+            git checkout -- pdfs/ 2>/dev/null || true       # 历史 index.json 用远端的
+            publish                                         # 在最新索引上重新合并
+          done
+
+          echo "::error::推送 pdfs/ 失败（已重试 3 次）；artifact 仍可下载"
+          exit 1
 
       - name: 上传编译日志（失败时）
         if: failure()
