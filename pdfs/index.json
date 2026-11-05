@@ -1,0 +1,25 @@
+{
+  "generated": "2026-11-05T14:44:55Z",
+  "items": [
+    {
+      "id": "004",
+      "title": "示例·三题",
+      "files": [
+        {
+          "kind": "题卷",
+          "name": "004-示例·三题·题卷.pdf",
+          "size": 67025,
+          "pages": 2
+        },
+        {
+          "kind": "答案卷",
+          "name": "004-示例·三题·答案卷.pdf",
+          "size": 120170,
+          "pages": 4
+        }
+      ],
+      "created": "2026-11-05T14:44:55Z",
+      "run": "https://github.com/wasio-official/wasio-official.github.io/actions/runs/42047815978"
+    }
+  ]
+}
