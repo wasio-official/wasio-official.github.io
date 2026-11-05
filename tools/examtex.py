@@ -768,6 +768,22 @@ def _font_chain_tex(names: list[str]) -> str:
     return build(0)
 
 
+def _if_font_chain(cands: list[tuple[str, str]], final: str) -> list[str]:
+    """生成「按顺序挑第一个已安装字体并执行对应命令」的 \\IfFontExistsTF 嵌套。
+
+    整个表达式**放在一行**里，靠递归配对括号，避免手工数括号出错
+    （手写多行 `{%` 版本踩过坑：括号不配对 → `! File ended while scanning use of \\use_i:nn`）。
+    """
+    def build(i: int) -> str:
+        if i >= len(cands):
+            return final
+        name, cmd = cands[i]
+        safe = name.replace("{", "").replace("}", "").replace("\\", "")
+        return "\\IfFontExistsTF{" + safe + "}{" + cmd + "}{" + build(i + 1) + "}"
+
+    return [build(0)]
+
+
 def _preamble(font: str | None) -> str:
     lines = [
         "% !TEX program = xelatex",
@@ -800,6 +816,44 @@ def _preamble(font: str | None) -> str:
         r"\setlength{\intextsep}{6pt plus 2pt minus 1pt}",
         r"\setlength{\columnsep}{12pt}",
     ]
+
+    # ---- 正文字体：必须显式指定，并逐级回退 ----
+    # 不写时 ctexart 默认用 SimSun（Windows 自带、Linux/CI 没有）。
+    # 在 GitHub Actions 上实测：中文能显示，但**西文、数字全部消失**
+    # （「本卷共 3 题」→「本卷共题」，公式里的字母也没了）。
+    lines.append("% ---- 正文字体（西文/数字）：按 Windows → TeX 自带 → Linux 常见 顺序回退 ----")
+    lines += _if_font_chain(
+        [
+            ("Times New Roman", r"\setmainfont{Times New Roman}"),
+            ("TeX Gyre Termes", r"\setmainfont{TeX Gyre Termes}"),
+            ("Liberation Serif", r"\setmainfont{Liberation Serif}"),
+            ("DejaVu Serif", r"\setmainfont{DejaVu Serif}"),
+            ("Noto Serif", r"\setmainfont{Noto Serif}"),
+            ("Noto Serif CJK SC", r"\setmainfont{Noto Serif CJK SC}"),
+        ],
+        final=r"\setmainfont{DejaVu Serif}",
+    )
+    lines.append("% ---- 正文字体（中文）：AutoFakeBold 保证 \\bfseries 有粗体 ----")
+    lines += _if_font_chain(
+        [
+            ("SimSun", r"\setCJKmainfont[AutoFakeBold=2]{SimSun}"),
+            ("Noto Serif CJK SC", r"\setCJKmainfont[AutoFakeBold=2]{Noto Serif CJK SC}"),
+            ("Source Han Serif SC", r"\setCJKmainfont[AutoFakeBold=2]{Source Han Serif SC}"),
+            ("FandolSong-Regular", r"\setCJKmainfont[AutoFakeBold=2]{FandolSong-Regular}"),
+            ("AR PL UMing CN", r"\setCJKmainfont[AutoFakeBold=2]{AR PL UMing CN}"),
+        ],
+        final=r"",
+    )
+    lines.append("% ---- 无衬线（兜底），同样逐级回退 ----")
+    lines += _if_font_chain(
+        [
+            ("SimHei", r"\setCJKsansfont[AutoFakeBold=2]{SimHei}"),
+            ("Noto Sans CJK SC", r"\setCJKsansfont[AutoFakeBold=2]{Noto Sans CJK SC}"),
+            ("Source Han Sans SC", r"\setCJKsansfont[AutoFakeBold=2]{Source Han Sans SC}"),
+        ],
+        final=r"",
+    )
+
     # ---- 缺字回退：圈号/罗马数字/上下标等 SimSun 缺字 ----
     # 字体在**编译时**再探测一次（fontspec 的 \IfFontExistsTF）：Python 端挑到的
     # 名字先试，不存在就按候选表依次退。这样 Linux / GitHub Actions 上没有
