@@ -61,15 +61,36 @@ jobs:
           version: 1.0
 
       - name: 环境自检
-        # 只提示不阻断：缺 MS Mincho 会自动改用 Noto CJK，不是错误
+        # 只诊断不阻断：真正的门是后面的「生成 PDF / 校验产物」。
+        # 自检内容全部写进 Step Summary，出问题时不用登录也能看到原因。
         run: |
-          python3 tools/pdfgen.py --check
-          echo "--- 关键 LaTeX 宏包 ---"
-          for sty in ctex.sty xeCJK.sty fontspec.sty adjustbox.sty tabularx.sty \
-                     wrapfig.sty needspace.sty lastpage.sty fancyhdr.sty newunicodechar.sty; do
-            path=$(kpsewhich "$sty" || true)
-            printf '%-20s %s\n' "$sty" "${path:-✗ 缺失（检查 apt 包）}"
-          done
+          set +e
+          CHECK_OUT=$(python3 tools/pdfgen.py --check 2>&1)
+          CHECK_CODE=$?
+          echo "$CHECK_OUT"
+          echo "自检退出码: $CHECK_CODE"
+
+          {
+            echo "### 环境自检（退出码 $CHECK_CODE）"
+            echo ""
+            echo '```'
+            echo "$CHECK_OUT"
+            echo ""
+            echo "--- xelatex ---"
+            command -v xelatex || echo "xelatex 不在 PATH"
+            xelatex --version 2>&1 | head -2
+            echo ""
+            echo "--- 关键 LaTeX 宏包 ---"
+            for sty in ctex.sty xeCJK.sty fontspec.sty adjustbox.sty tabularx.sty \
+                       wrapfig.sty needspace.sty lastpage.sty fancyhdr.sty newunicodechar.sty; do
+              path=$(kpsewhich "$sty" 2>/dev/null)
+              printf '%-20s %s\n' "$sty" "${path:-缺失（检查 apt 包）}"
+            done
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # 缺字体/缺可选工具都不该让整个发布失败，交后续步骤判定
+          exit 0
 
       - name: 写入粘贴的 paperset JSON
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.paperset_json != ''
