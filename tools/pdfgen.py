@@ -541,8 +541,11 @@ def run(cmd: list[str], cwd: Path, timeout: int = 600) -> tuple[int, str]:
     return r.returncode, out
 
 
-def compile_pdf(work: Path, stem: str, passes: int = 2) -> tuple[bool, dict]:
-    """跑两遍 xelatex（第二遍为了交叉引用与目录）。"""
+def compile_pdf(work: Path, stem: str, passes: int = 3) -> tuple[bool, dict]:
+    """跑多遍 xelatex：页脚「共 N 页」用的 LastPage 交叉引用要 3 遍才稳定。
+
+    只跑 2 遍时，Linux/CI 上偶发出现「第 2 页 共 ?? 页」（第二遍还没把 .aux 写完）。
+    """
     info = {"pages": None, "missing": [], "overfull": 0, "overfull_vbox": 0, "error": None}
     pdf = work / f"{stem}.pdf"
 

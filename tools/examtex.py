@@ -853,6 +853,11 @@ def _preamble(font: str | None) -> str:
         ],
         final=r"",
     )
+    # `\zh{}`：数学里放中文用它。`\text{}` 走西文字体，全角标点会缺字
+    # （实测 `、` 在 Times New Roman 下报 Missing character 直接消失）。
+    lines.append(
+        r"\providecommand{\zh}[1]{\text{\CJKfamily{\CJKrmdefault}#1}}"
+    )
 
     # ---- 缺字回退：圈号/罗马数字/上下标等 SimSun 缺字 ----
     # 字体在**编译时**再探测一次（fontspec 的 \IfFontExistsTF）：Python 端挑到的
@@ -1006,7 +1011,7 @@ def build_exam_tex(questions: list[dict], meta: dict, font: str | None, img_dir:
             parts.append(_render_answer(q, meta, img_dir, rep))
         info = {"short": 0, "pages": None, "groups": [], "report": rep}
         parts.append("\n\\end{document}\n")
-        return "\n".join(parts), info
+        return _cjk_text_fix("\n".join(parts)), info
 
     for q in questions:
         classify(q, img_dir)
@@ -1037,7 +1042,129 @@ def build_exam_tex(questions: list[dict], meta: dict, font: str | None, img_dir:
                    for q in questions],
         "report": rep,
     }
-    return "\n".join(parts), info
+    return _cjk_text_fix("\n".join(parts)), info
+
+
+def _cjk_text_fix(tex: str) -> str:
+    r"""让数学区段里的中文走中文字体。
+
+    两种情况都要处理，否则 PDF 里那个字直接消失
+    （`Missing character: There is no 、 (U+3001) in font Times New Roman`）：
+
+    1. `\text{中文}` —— `\text{}` 用的是**西文字体**，全角标点必然缺字；
+    2. 公式里裸着的中文标点/汉字，如 `$m 、 Q 、 B_{0}$`（源数据里很常见）。
+
+    统一改成 `\zh{…}`（导言区定义为 `\text{\CJKfamily{\CJKrmdefault}…}`）。
+    """
+    tex = _wrap_text_cjk(tex)
+    return _wrap_math_cjk(tex)
+
+
+def _match_brace(s: str, start: int) -> int:
+    """s[start] 是 `{`，返回配对 `}` 的下标；不配对返回 -1。"""
+    depth = 0
+    for k in range(start, len(s)):
+        if s[k] == "{":
+            depth += 1
+        elif s[k] == "}":
+            depth -= 1
+            if depth == 0:
+                return k
+    return -1
+
+
+def _wrap_text_cjk(tex: str) -> str:
+    r"""`\text{含中文}` → `\zh{含中文}`。"""
+    out = []
+    i = 0
+    needle = r"\text{"
+    while True:
+        j = tex.find(needle, i)
+        if j < 0:
+            out.append(tex[i:])
+            break
+        brace = j + len(needle) - 1          # 指向 `{`
+        k = _match_brace(tex, brace)
+        if k < 0:
+            out.append(tex[i:])
+            break
+        inner = tex[brace + 1:k]
+        out.append(tex[i:j])
+        out.append((r"\zh{" + inner + "}") if any(_is_cjk(c) for c in inner)
+                   else tex[j:k + 1])
+        i = k + 1
+    return "".join(out)
+
+
+def _wrap_math_cjk(tex: str) -> str:
+    r"""把 `$…$` / `\[…\]` 里裸着的中文串包成 `\zh{…}`；已有的 `\zh{}` 原样跳过。"""
+    out = []
+    i = 0
+    n = len(tex)
+    while i < n:
+        c = tex[i]
+        if c == "\\" and tex.startswith(r"\[", i):
+            k = tex.find(r"\]", i + 2)
+            if k < 0:
+                out.append(tex[i:])
+                break
+            out.append(r"\[" + _wrap_cjk_in_math(tex[i + 2:k]) + r"\]")
+            i = k + 2
+            continue
+        if c == "$" and i + 1 < n and tex[i + 1] != "$":
+            k = i + 1
+            while k < n:
+                if tex[k] == "\\":
+                    k += 2
+                    continue
+                if tex[k] == "$":
+                    break
+                k += 1
+            if k >= n:
+                out.append(tex[i:])
+                break
+            out.append("$" + _wrap_cjk_in_math(tex[i + 1:k]) + "$")
+            i = k + 1
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def _wrap_cjk_in_math(seg: str) -> str:
+    """单个数学区段内部：把成串的中文包成 `\\zh{}`，跳过已有 `\\zh{…}` 的内容。"""
+    out = []
+    i = 0
+    n = len(seg)
+    while i < n:
+        if seg.startswith(r"\zh{", i):
+            k = _match_brace(seg, i + 3)
+            if k > 0:
+                out.append(seg[i:k + 1])
+                i = k + 1
+                continue
+        if _is_cjk(seg[i]):
+            j = i
+            while j < n and _is_cjk(seg[j]):
+                j += 1
+            out.append(r"\zh{" + seg[i:j] + "}")
+            i = j
+            continue
+        out.append(seg[i])
+        i += 1
+    return "".join(out)
+
+
+
+def _is_cjk(ch: str) -> bool:
+    o = ord(ch)
+    return (
+        0x4E00 <= o <= 0x9FFF      # 汉字
+        or 0x3400 <= o <= 0x4DBF   # 扩展 A
+        or 0x3000 <= o <= 0x303F   # CJK 标点（、。「」等）
+        or 0xFF00 <= o <= 0xFFEF   # 全角字符
+    )
+
 
 
 # 与 pdfgen 共用的缺字回退字符集 / 候选字体表

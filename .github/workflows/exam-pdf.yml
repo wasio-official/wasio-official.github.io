@@ -156,16 +156,40 @@ jobs:
             stem="$(basename "$f" .json)"
             echo "::group::[$i] $f"
             # 数据在仓库里，--offline 保证全程不联网；输出目录带序号避免同名覆盖
-            if python3 tools/pdfgen.py "$f" -o "out/${i}-${stem}" --mode "$mode" --offline; then
+            # 控制台输出同时落盘到 out/<i>-<stem>/console.txt，随日志一起发布到站点
+            mkdir -p "out/${i}-${stem}"
+            python3 tools/pdfgen.py "$f" -o "out/${i}-${stem}" --mode "$mode" --offline 2>&1 \
+              | tee "out/${i}-${stem}/console.txt"
+            code=${PIPESTATUS[0]}
+            if [ "$code" -eq 0 ]; then
               echo "✓ 完成：$f"
             else
-              echo "::error::出卷失败：$f（日志见 artifact）"
+              echo "::error::出卷失败：$f（退出码 $code，控制台输出见 pdfs/build-logs/）"
               fail=1
             fi
             echo "::endgroup::"
           done < papersets/work/list.txt
           echo "共处理 $i 个 paperset，失败标记=$fail"
           exit "$fail"
+
+      - name: 收集编译日志到站点（免登录排查用）
+        if: always()
+        # Actions 的日志要登录才能看。把每份 .log / 控制台输出复制到 pdfs/build-logs/，
+        # 由后面的「发布到站点」一起提交，于是从站点就能直接读到 Linux 上的报错。
+        # 每次运行先清空，只保留最近一次的。
+        run: |
+          set +e
+          rm -rf pdfs/build-logs
+          mkdir -p pdfs/build-logs
+          find out -type f -name '*.log' | while IFS= read -r f; do
+            base=$(echo "$f" | sed 's|^out/||; s|/|__|g')
+            cp "$f" "pdfs/build-logs/$base"
+          done
+          find out -type f -name 'console.txt' | while IFS= read -r f; do
+            base=$(echo "$f" | sed 's|^out/||; s|/|__|g')
+            cp "$f" "pdfs/build-logs/$base"
+          done
+          ls -la pdfs/build-logs | head -20 || true
 
       - name: 校验产物
         if: always()
