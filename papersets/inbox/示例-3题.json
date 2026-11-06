@@ -4,7 +4,7 @@
   "site": "https://wasio-official.github.io",
   "meta": {
     "title": "示例·三题",
-    "subtitle": "线上出卷示例（跨卷组卷，验证版式与下载）",
+    "subtitle": "线上出卷示例 · 中文标点与字体修复验证",
     "duration": 120,
     "one_per_page": false,
     "show_analysis": true,
