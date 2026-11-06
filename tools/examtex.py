@@ -817,42 +817,44 @@ def _preamble(font: str | None) -> str:
         r"\setlength{\columnsep}{12pt}",
     ]
 
-    # ---- 正文字体：必须显式指定，并逐级回退 ----
-    # 不写时 ctexart 默认用 SimSun（Windows 自带、Linux/CI 没有）。
-    # 在 GitHub Actions 上实测：中文能显示，但**西文、数字全部消失**
-    # （「本卷共 3 题」→「本卷共题」，公式里的字母也没了）。
-    lines.append("% ---- 正文字体（西文/数字）：按 Windows → TeX 自带 → Linux 常见 顺序回退 ----")
-    lines += _if_font_chain(
-        [
-            ("Times New Roman", r"\setmainfont{Times New Roman}"),
-            ("TeX Gyre Termes", r"\setmainfont{TeX Gyre Termes}"),
-            ("Liberation Serif", r"\setmainfont{Liberation Serif}"),
-            ("DejaVu Serif", r"\setmainfont{DejaVu Serif}"),
-            ("Noto Serif", r"\setmainfont{Noto Serif}"),
-            ("Noto Serif CJK SC", r"\setmainfont{Noto Serif CJK SC}"),
-        ],
-        final=r"\setmainfont{DejaVu Serif}",
-    )
-    lines.append("% ---- 正文字体（中文）：AutoFakeBold 保证 \\bfseries 有粗体 ----")
-    lines += _if_font_chain(
-        [
-            ("SimSun", r"\setCJKmainfont[AutoFakeBold=2]{SimSun}"),
-            ("Noto Serif CJK SC", r"\setCJKmainfont[AutoFakeBold=2]{Noto Serif CJK SC}"),
-            ("Source Han Serif SC", r"\setCJKmainfont[AutoFakeBold=2]{Source Han Serif SC}"),
-            ("FandolSong-Regular", r"\setCJKmainfont[AutoFakeBold=2]{FandolSong-Regular}"),
-            ("AR PL UMing CN", r"\setCJKmainfont[AutoFakeBold=2]{AR PL UMing CN}"),
-        ],
-        final=r"",
-    )
-    lines.append("% ---- 无衬线（兜底），同样逐级回退 ----")
-    lines += _if_font_chain(
-        [
-            ("SimHei", r"\setCJKsansfont[AutoFakeBold=2]{SimHei}"),
-            ("Noto Sans CJK SC", r"\setCJKsansfont[AutoFakeBold=2]{Noto Sans CJK SC}"),
-            ("Source Han Sans SC", r"\setCJKsansfont[AutoFakeBold=2]{Source Han Sans SC}"),
-        ],
-        final=r"",
-    )
+    # ---- 正文字体（西文/数字）----
+    # 不写时 ctexart 默认用 SimSun（Windows 自带、Linux/CI 没有），CI 上
+    # **西文和数字会整体消失**（「本卷共 3 题」→「本卷共题」）。
+    #
+    # 关键坑：`\IfFontExistsTF{…}{<true>}{<false>}` 把 <true> 放进 TeX 组里执行，
+    # 而 `\setmainfont` 是局部赋值 —— 直接写在组里等于没写。
+    # 试过 `\globaldefs=1`，会把 fontspec 内部状态也全局化，报
+    # `Key 'fontspec-opentype/Script' accepts only a fixed set of values`。
+    # 正确做法：组内只用 `\gdef` 记名字（gdef 天然全局），组外再应用。
+    lines.append("% ---- 正文字体（西文/数字）：按 Windows → TeX 自带 → Linux 常见 顺序挑 ----")
+    cands = [
+        "Times New Roman",
+        "TeX Gyre Termes",
+        "Liberation Serif",
+        "DejaVu Serif",
+        "Noto Serif",
+        "Noto Serif CJK SC",
+    ]
+
+    def _gdef_chain(names: list[str], macro: str) -> str:
+        def build(i: int) -> str:
+            if i >= len(names):
+                return r"\gdef" + macro + "{}"
+            n = names[i].replace("{", "").replace("}", "").replace("\\", "")
+            return (r"\IfFontExistsTF{" + n + "}{\\gdef" + macro + "{" + n + "}}{"
+                    + build(i + 1) + "}")
+        return build(0)
+
+    lines.append(_gdef_chain(cands, r"\wsMainFont"))
+    lines.append(r"\ifx\wsMainFont\empty\else")
+    lines.append(r"\expandafter\setmainfont\expandafter{\wsMainFont}")
+    lines.append(r"\fi")
+
+    # ---- 中文主字体：交给 ctex 默认 ----
+    # 之前这里覆盖过 \setCJKmainfont，结果在组内被局部化、白忙一场；
+    # 而 ctex 自己会挑可用字族（Windows→SimSun，Linux→Noto/Fandol），
+    # 实测两边中文与粗体都正常，所以不再覆盖，少一处出错面。
+
     # `\zh{}`：数学里放中文用它。`\text{}` 走西文字体，全角标点会缺字
     # （实测 `、` 在 Times New Roman 下报 Missing character 直接消失）。
     lines.append(
@@ -880,6 +882,7 @@ def _preamble(font: str | None) -> str:
             rules.append(r"\newunicodechar{" + ch + r"}{\ensuremath{" + cmd + "}}")
         lines += rules
         lines.append(r"\fi")
+    lines.append(r"\globaldefs=0")     # 恢复默认：后续排版不要再强制全局
     lines += [r"\begin{document}", ""]
     return "\n".join(lines) + "\n"
 

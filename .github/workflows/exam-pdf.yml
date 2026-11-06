@@ -58,12 +58,17 @@ jobs:
           # texlive-lang-chinese→ ctex / xeCJK
           # latex-extra         → adjustbox、needspace、newunicodechar 等
           # fonts-noto-cjk      → Linux 上替代 MS Mincho 的符号回退字体
+          # fonts-lmodern       → Latin Modern，TeX 默认西文字体；缺了就
+          #                       `Font TU/lmr/m/n/10=[lmroman10-regular] not loadable`
+          # fonts-dejavu-core / fonts-liberation / fonts-texgyre → 西文字体候选
           # poppler-utils       → pdfinfo（统计页数）
           packages: >-
             texlive-xetex texlive-lang-chinese texlive-latex-extra
             texlive-latex-recommended texlive-fonts-recommended
-            texlive-science latexmk fonts-noto-cjk poppler-utils
-          version: 1.0
+            texlive-science latexmk
+            fonts-noto-cjk fonts-lmodern fonts-dejavu-core fonts-liberation fonts-texgyre
+            poppler-utils
+          version: 1.1
 
       - name: 环境自检
         # 只诊断不阻断：真正的门是后面的「生成 PDF / 校验产物」。
