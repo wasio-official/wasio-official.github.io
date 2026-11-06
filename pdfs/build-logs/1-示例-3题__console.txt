@@ -28,11 +28,15 @@
 ③ 编译 PDF（xelatex ×2）
   编译中…
   编译中…
+  编译中…
+  编译中…
+  编译中…
+  编译中…
 
 === 结果 ===
-  ✗ 示例·三题·题卷 编译失败：! Font TU/lmr/m/n/10=[lmroman10-regular]:mapping=tex-text; at 10.0pt not loadab
-    可看日志：/home/runner/work/wasio-official.github.io/wasio-official.github.io/out/1-示例-3题/示例·三题·题卷.log
-  ✗ 示例·三题·答案卷 编译失败：! Font TU/lmr/m/n/10=[lmroman10-regular]:mapping=tex-text; at 10.0pt not loadab
-    可看日志：/home/runner/work/wasio-official.github.io/wasio-official.github.io/out/1-示例-3题/示例·三题·答案卷.log
+  ✓ 示例·三题·题卷 : /home/runner/work/wasio-official.github.io/wasio-official.github.io/out/1-示例-3题/示例·三题·题卷.pdf
+      页数 2；体积 140 KB
+  ✓ 示例·三题·答案卷 : /home/runner/work/wasio-official.github.io/wasio-official.github.io/out/1-示例-3题/示例·三题·答案卷.pdf
+      页数 4；体积 201 KB
 
 中间文件都在 /home/runner/work/wasio-official.github.io/wasio-official.github.io/out/1-示例-3题（.md / .tex / .log），便于排查。

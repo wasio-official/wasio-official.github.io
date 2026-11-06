@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023/Debian) (preloaded format=xelatex 2026.11.6)  6 NOV 2026 01:09
+This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023/Debian) (preloaded format=xelatex 2026.11.6)  6 NOV 2026 01:38
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -49,19 +49,6 @@ File: ctexopts.cfg 2022/07/14 v2.5.10 Option configuration file (CTEX)
 Document Class: article 2023/05/17 v1.4n Standard LaTeX document class
 (/usr/share/texlive/texmf-dist/tex/latex/base/size10.clo
 File: size10.clo 2023/05/17 v1.4n Standard LaTeX file (size option)
-
-! Font TU/lmr/m/n/10=[lmroman10-regular]:mapping=tex-text; at 10.0pt not loadab
-le: Metric (TFM) file or installed font not found.
-<to be read again> 
-                   relax 
-l.54 \normalsize
-                
-I wasn't able to read the size data for this font,
-so I will ignore the font specification.
-[Wizards can fix TFM files using TFtoPL/PLtoTF.]
-You might try inserting a different font spec;
-e.g., type `I\font<same font id>=<substitute font name>'.
-
 )
 \c@part=\count190
 \c@section=\count191
@@ -74,7 +61,8 @@ e.g., type `I\font<same font id>=<substitute font name>'.
 \abovecaptionskip=\skip48
 \belowcaptionskip=\skip49
 \bibindent=\dimen141
-) (/usr/share/texlive/texmf-dist/tex/latex/ctex/engine/ctex-engine-xetex.def
+)
+(/usr/share/texlive/texmf-dist/tex/latex/ctex/engine/ctex-engine-xetex.def
 File: ctex-engine-xetex.def 2022/07/14 v2.5.10 XeLaTeX adapter (CTEX)
 
 (/usr/share/texlive/texmf-dist/tex/xelatex/xecjk/xeCJK.sty
@@ -175,20 +163,8 @@ X
 (/usr/share/texlive/texmf-dist/tex/latex/base/fontenc.sty
 Package: fontenc 2021/04/29 v2.0v Standard LaTeX package
 )
-(/usr/share/texlive/texmf-dist/tex/latex/fontspec/fontspec.cfg)
-! Font TU/lmr/bx/n/10=[lmroman10-bold]:mapping=tex-text; at 10.0pt not loadable
-: Metric (TFM) file or installed font not found.
-<to be read again> 
-                   relax 
-l.4160 \strongfontdeclare{ \bfseries }
-                                      
-I wasn't able to read the size data for this font,
-so I will ignore the font specification.
-[Wizards can fix TFM files using TFtoPL/PLtoTF.]
-You might try inserting a different font spec;
-e.g., type `I\font<same font id>=<substitute font name>'.
-
-)) (/usr/share/texlive/texmf-dist/tex/xelatex/xecjk/xeCJK.cfg
+(/usr/share/texlive/texmf-dist/tex/latex/fontspec/fontspec.cfg)))
+(/usr/share/texlive/texmf-dist/tex/xelatex/xecjk/xeCJK.cfg
 File: xeCJK.cfg 2022/08/05 v3.9.1 Configuration file for xeCJK package
 ))
 \ccwd=\dimen173
@@ -215,30 +191,6 @@ File: ctex-name-utf8.cfg 2022/07/14 v2.5.10 Caption with encoding UTF-8 (CTEX)
 )) (/usr/share/texlive/texmf-dist/tex/latex/ctex/ctex-c5size.clo
 File: ctex-c5size.clo 2022/07/14 v2.5.10 c5size option (CTEX)
 )
-! Font TU/lmr/m/n/7.52812=[lmroman8-regular]:mapping=tex-text; at 7.52812pt not
- loadable: Metric (TFM) file or installed font not found.
-<to be read again> 
-                   relax 
-l.1443   }
-          
-I wasn't able to read the size data for this font,
-so I will ignore the font specification.
-[Wizards can fix TFM files using TFtoPL/PLtoTF.]
-You might try inserting a different font spec;
-e.g., type `I\font<same font id>=<substitute font name>'.
-
-! Font TU/lmr/m/n/10.53937=[lmroman10-regular]:mapping=tex-text; at 10.53937pt 
-not loadable: Metric (TFM) file or installed font not found.
-<to be read again> 
-                   relax 
-l.1444 \normalsize
-                  
-I wasn't able to read the size data for this font,
-so I will ignore the font specification.
-[Wizards can fix TFM files using TFtoPL/PLtoTF.]
-You might try inserting a different font spec;
-e.g., type `I\font<same font id>=<substitute font name>'.
-
 (/usr/share/texlive/texmf-dist/tex/latex/ctex/fontset/ctex-fontset-fandol.def
 File: ctex-fontset-fandol.def 2022/07/14 v2.5.10 Fandol fonts definition (CTEX)
 
@@ -681,46 +633,11 @@ text;"
 -text;"
 
 
-
-Package xeCJK Warning: Redefining CJKfamily `\CJKrmdefault'
-(xeCJK)                (FandolSong-Regular(0)).
-
-
-Package fontspec Info: Could not resolve font "Noto Serif CJK SC/I" (it
-(fontspec)             probably doesn't exist).
-
-
 Package fontspec Info: Could not resolve font "Noto Serif CJK SC/I" (it
 (fontspec)             probably doesn't exist).
 
 
 Package fontspec Info: Font family 'NotoSerifCJKSC(0)' created for font 'Noto
-(fontspec)             Serif CJK SC' with options
-(fontspec)             [Script={CJK},AutoFakeBold={2}].
-(fontspec)              
-(fontspec)              This font family consists of the following NFSS
-(fontspec)             series/shapes:
-(fontspec)              
-(fontspec)             - 'normal' (m/n) with NFSS spec.: <->"Noto Serif CJK
-(fontspec)             SC/OT:script=hani;language=dflt;"
-(fontspec)             - 'small caps'  (m/sc) with NFSS spec.: 
-(fontspec)             - 'bold' (b/n) with NFSS spec.: <->"Noto Serif CJK
-(fontspec)             SC/OT:script=hani;language=dflt;embolden=2;"
-(fontspec)             - 'bold small caps'  (b/sc) with NFSS spec.: 
-(fontspec)             - 'bold italic' (b/it) with NFSS spec.: <->"Noto Serif
-(fontspec)             CJK SC/BI/OT:script=hani;language=dflt;"
-(fontspec)             - 'bold italic small caps'  (b/scit) with NFSS spec.: 
-
-
-Package xeCJK Warning: Redefining CJKfamily `\CJKsfdefault'
-(xeCJK)                (FandolHei-Regular).
-
-
-Package fontspec Info: Could not resolve font "Noto Serif CJK SC/I" (it
-(fontspec)             probably doesn't exist).
-
-
-Package fontspec Info: Font family 'NotoSerifCJKSC(1)' created for font 'Noto
 (fontspec)             Serif CJK SC' with options [].
 (fontspec)              
 (fontspec)              This font family consists of the following NFSS
@@ -736,7 +653,8 @@ Package fontspec Info: Font family 'NotoSerifCJKSC(1)' created for font 'Noto
 (fontspec)             CJK SC/BI/OT:script=latn;language=dflt;"
 (fontspec)             - 'bold italic small caps'  (b/scit) with NFSS spec.: 
 
-No file 示例·三题·题卷.aux.
+
+(./示例·三题·题卷.aux)
 \openout1 = `示例·三题·题卷.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 195.
@@ -823,6 +741,7 @@ LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
 (Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 195.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 (Font)                  OT1/cmtt/m/n --> TU/lmtt/b/n on input line 195.
+
 *geometry* driver: auto-detecting
 *geometry* detected driver: xetex
 *geometry* verbose mode - [ preamble ] result:
@@ -858,14 +777,13 @@ LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
 Package hyperref Info: Link coloring OFF on input line 195.
+(./示例·三题·题卷.out) (./示例·三题·题卷.out)
 \@outlinefile=\write3
 \openout3 = `示例·三题·题卷.out'.
 
-
-Package hyperref Warning: Rerun to get /PageLabels entry.
-
 LaTeX Font Info:    Trying to load font information for U+msa on input line 199
 .
+
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
@@ -877,11 +795,7 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 File: images/JPhO-联考卷-试卷-6.jpg Graphic file (type bmp)
 <images/JPhO-联考卷-试卷-6.jpg>
-
-
-LaTeX Warning: Reference `LastPage' on page 1 undefined on input line 235.
-
-[1
+ [1
 
 ]
 
@@ -904,9 +818,6 @@ Package wrapfig Warning: Collision between wrapping environments on input line
 
 File: images/OPhO-第2届-决赛-试卷-1.jpg Graphic file (type bmp)
 <images/OPhO-第2届-决赛-试卷-1.jpg>
-
-LaTeX Warning: Reference `LastPage' on page 2 undefined on input line 267.
-
 [2] 
 enddocument/afterlastpage: lastpage setting LastPage.
 (./示例·三题·题卷.aux)
@@ -914,32 +825,16 @@ enddocument/afterlastpage: lastpage setting LastPage.
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2022/07/14>
  ***********
-
-
-LaTeX Warning: There were undefined references.
-
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
-
-Package rerunfilecheck Warning: File `示例·三题·题卷.out' has changed.
-(rerunfilecheck)                Rerun to get outlines right
-(rerunfilecheck)                or use package `bookmark'.
-
-Package rerunfilecheck Info: Checksums for `示例·三题·题卷.out':
-(rerunfilecheck)             Before: <no file>
-(rerunfilecheck)             After:  D41D8CD98F00B204E9800998ECF8427E;0.
-
-Package lastpage Warning: Rerun to get the references right on input line 267.
-
+Package rerunfilecheck Info: File `示例·三题·题卷.out' has not changed.
+(rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 17903 strings out of 476442
- 387970 string characters out of 5793407
+ 17891 strings out of 476415
+ 387909 string characters out of 5792682
  1936627 words of memory out of 5000000
- 39522 multiletter control sequences out of 15000+600000
- 571030 words of font info for 129 fonts, out of 8000000 for 9000
+ 39533 multiletter control sequences out of 15000+600000
+ 571014 words of font info for 127 fonts, out of 8000000 for 9000
  264 hyphenation exceptions out of 8191
- 93i,11n,97p,1199b,352s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 93i,11n,97p,1199b,354s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
 Output written on 示例·三题·题卷.pdf (2 pages).
