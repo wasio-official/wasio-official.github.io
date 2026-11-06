@@ -1,0 +1,38 @@
+/home/runner/work/wasio-official.github.io/wasio-official.github.io/tools/examtex.py:761: SyntaxWarning: invalid escape sequence '\I'
+  """生成 \IfFontExistsTF 嵌套：第一个「系统里真的装了」的字体定义 \symfont。"""
+/home/runner/work/wasio-official.github.io/wasio-official.github.io/tools/md2latex.py:450: SyntaxWarning: invalid escape sequence '\$'
+  """把落单的 `$$` 定界符中和掉，保证 `$$` 成对。
+/home/runner/work/wasio-official.github.io/wasio-official.github.io/tools/md2latex.py:547: SyntaxWarning: invalid escape sequence '\m'
+  """把 `\\mathrm{拍}` 这类"中文字在数学字体里"的写法改成 `\\text{拍}`。
+=== 出卷 ===
+  目录    : papersets/inbox/示例-3题.json
+  标题    : 示例·三题
+  题目数  : 3
+  模式    : both（题卷 / 答案卷）
+  输出到  : /home/runner/work/wasio-official.github.io/wasio-official.github.io/out/1-示例-3题
+  题库路径: /home/runner/work/wasio-official.github.io/wasio-official.github.io/data
+
+① 取题目、复制图片
+   数据来源：本地 3 份 / 网络 0 份
+   题目 3 道；图片 4 张
+   源文题号清洗：题干 0 处；解析 0 处
+
+② 生成 LaTeX（examtex.py：卷头 / 题号 / 分页 / 图片版式）
+   缺字回退：Noto Serif CJK SC
+   · 题卷：预计 2 页；每页题数 [1, 2]；每页统一留白 [8.0, 4.5] cm
+       第 1 题：正文 10.2 cm + 书写留白 8.0 cm（小问 5，计算证明类）
+       第 2 题：正文 4.7 cm + 书写留白 4.5 cm（小问 0，计算证明类）
+       第 3 题：正文 4.58 cm + 书写留白 4.5 cm（小问 0，计算证明类）
+   · 答案卷：3 节，按内容自然连排
+
+③ 编译 PDF（xelatex ×2）
+  编译中…
+  编译中…
+
+=== 结果 ===
+  ✗ 示例·三题·题卷 编译失败：! Font TU/lmr/m/n/10=[lmroman10-regular]:mapping=tex-text; at 10.0pt not loadab
+    可看日志：/home/runner/work/wasio-official.github.io/wasio-official.github.io/out/1-示例-3题/示例·三题·题卷.log
+  ✗ 示例·三题·答案卷 编译失败：! Font TU/lmr/m/n/10=[lmroman10-regular]:mapping=tex-text; at 10.0pt not loadab
+    可看日志：/home/runner/work/wasio-official.github.io/wasio-official.github.io/out/1-示例-3题/示例·三题·答案卷.log
+
+中间文件都在 /home/runner/work/wasio-official.github.io/wasio-official.github.io/out/1-示例-3题（.md / .tex / .log），便于排查。
