@@ -323,6 +323,7 @@ function psRenderBar() {
       <span class="ps-count">已选 <b>${n}</b> 题<span class="ps-name">组卷名：<b id="ps-name">${esc(currentName)}</b></span></span>
       <button class="ctl" id="ps-export" type="button" ${n ? "" : "disabled"}>导选出卷目录</button>
       <button class="ctl" id="ps-import-btn" type="button">导入目录</button>
+      <button class="ctl" id="ps-pdf" type="button" ${n ? "" : "disabled"} title="用浏览器把当前组卷打印成 PDF，全程在本机完成">生成 PDF</button>
       <button class="ctl" id="ps-clear" type="button" ${n ? "" : "disabled"}>清空</button>
       <input type="file" id="ps-file" accept=".json,application/json" hidden>
     </div>
@@ -386,6 +387,14 @@ function psRenderBar() {
   }
 
   host.querySelector("#ps-export").addEventListener("click", () => psDownload());
+
+  // 网页出卷：不拼参数，直接跳过去 —— pdfgen.html 会自己读 localStorage 里的选择。
+  // 跳转前先落盘一次，防止「刚打完标题就点按钮」时 change 事件还没触发。
+  host.querySelector("#ps-pdf").addEventListener("click", () => {
+    try { psMetaSave(); } catch (err) { /* 隐私模式忽略 */ }
+    location.href = "pdfgen.html";
+  });
+
   host.querySelector("#ps-clear").addEventListener("click", () => {
     if (!psCount()) return;
     if (!confirm(`确定清空已选的 ${psCount()} 道题？`)) return;

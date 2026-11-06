@@ -438,8 +438,6 @@ function topNavHTML() {
   const items = [
     { label: "题库", href: "library.html" },
     { label: "考点", href: "tags.html" },
-    // 出卷下载：Actions 出完卷后把 PDF 提交到 pdfs/，这里免登录下载
-    { label: "出卷下载", href: "pdfs.html" },
   ];
   return `<nav class="topnav">${items
     .map((it) => {

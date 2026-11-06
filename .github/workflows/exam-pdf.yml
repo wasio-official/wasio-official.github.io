@@ -2,11 +2,10 @@ name: 出卷 PDF
 
 # 触发方式（两种）：
 #   1) 本页 «Run workflow»：直接粘贴 paperset JSON（或留空，处理 papersets/inbox/*.json）
-#   2) push 到 papersets/inbox/*.json：把网站导出的 JSON 上传/提交到这里即自动出卷
+#   2) push 到 papersets/inbox/*.json：把网站导出的 JSON 提交到这里即自动出卷
 #
-# ⚠ 防自激：下面的 push 触发**只**匹配 papersets/inbox/*.json，
-#   而本流程最后提交的是 pdfs/（PDF + index.json），不在 paths 里 → 不会再次触发。
-#   （理论上 GITHUB_TOKEN 推送也不会触发 workflow，这里是双保险；别放宽 paths。）
+# 产物只作为 artifact 交付（保留 90 天），**不提交回仓库、不出现在站点上**。
+# 出卷是个人行为，别人看不到你的组卷与 PDF。
 on:
   workflow_dispatch:
     inputs:
@@ -27,10 +26,10 @@ on:
     paths:
       - 'papersets/inbox/*.json'
 
-# 需要写权限：出卷完成后要把 pdfs/ 提交回 main，让 Pages 当静态文件发布
-# （站点 pdfs.html 免登录下载）。只改 pdfs/，不碰题库数据。
+# 只读即可：产物只通过 artifact 交付（谁触发谁下载），不写回仓库。
+# 出卷是用户的个人行为，不发布到站点上。
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   exam-pdf:
@@ -161,7 +160,7 @@ jobs:
             stem="$(basename "$f" .json)"
             echo "::group::[$i] $f"
             # 数据在仓库里，--offline 保证全程不联网；输出目录带序号避免同名覆盖
-            # 控制台输出同时落盘到 out/<i>-<stem>/console.txt，随日志一起发布到站点
+            # 控制台输出同时落盘到 out/<i>-<stem>/console.txt，失败时随 artifact 一起带走
             mkdir -p "out/${i}-${stem}"
             python3 tools/pdfgen.py "$f" -o "out/${i}-${stem}" --mode "$mode" --offline 2>&1 \
               | tee "out/${i}-${stem}/console.txt"
@@ -169,32 +168,13 @@ jobs:
             if [ "$code" -eq 0 ]; then
               echo "✓ 完成：$f"
             else
-              echo "::error::出卷失败：$f（退出码 $code，控制台输出见 pdfs/build-logs/）"
+              echo "::error::出卷失败：$f（退出码 $code）"
               fail=1
             fi
             echo "::endgroup::"
           done < papersets/work/list.txt
           echo "共处理 $i 个 paperset，失败标记=$fail"
           exit "$fail"
-
-      - name: 收集编译日志到站点（免登录排查用）
-        if: always()
-        # Actions 的日志要登录才能看。把每份 .log / 控制台输出复制到 pdfs/build-logs/，
-        # 由后面的「发布到站点」一起提交，于是从站点就能直接读到 Linux 上的报错。
-        # 每次运行先清空，只保留最近一次的。
-        run: |
-          set +e
-          rm -rf pdfs/build-logs
-          mkdir -p pdfs/build-logs
-          find out -type f -name '*.log' | while IFS= read -r f; do
-            base=$(echo "$f" | sed 's|^out/||; s|/|__|g')
-            cp "$f" "pdfs/build-logs/$base"
-          done
-          find out -type f -name 'console.txt' | while IFS= read -r f; do
-            base=$(echo "$f" | sed 's|^out/||; s|/|__|g')
-            cp "$f" "pdfs/build-logs/$base"
-          done
-          ls -la pdfs/build-logs | head -20 || true
 
       - name: 校验产物
         if: always()
@@ -258,60 +238,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
-      # ---------------------------------------------------------------- 发布到站点
-      # 把 out/ 里的 PDF 提交回仓库根的 pdfs/，由 GitHub Pages 当静态文件发布，
-      # 站点 pdfs.html 就能免登录直接下载（artifact 仍保留：要登录 GitHub 才能下）。
-      # 复杂逻辑（命名 / 索引合并 / 去重 / 30 组淘汰）在 Python 脚本里，
-      # 同一脚本本地能跑：python3 .github/scripts/publish_pdfs.py --help
-      - name: 发布到站点
-        if: always()
-        env:
-          MSG_FILE: ${{ runner.temp }}/pdf-commit-msg.txt
-        run: |
-          set -euo pipefail
-
-          publish() {
-            python3 .github/scripts/publish_pdfs.py \
-              --out out \
-              --dest pdfs \
-              --run-number "$GITHUB_RUN_NUMBER" \
-              --run-id "$GITHUB_RUN_ID" \
-              --repo "$GITHUB_REPOSITORY" \
-              --keep 30 \
-              --commit-msg-file "$MSG_FILE"
-          }
-
-          publish
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          msg="$(cat "$MSG_FILE")"
-
-          # 并发保护：推送失败就把「最新 main」拿过来，把本次结果重新合并进去再推。
-          # 为什么不用 git pull --rebase：checkout 默认 depth=1 的浅克隆，
-          # 本地提交的父提交是 graft 出来的根，rebase 找不到 merge base 会失败；
-          # 「重放」不需要历史 —— index.json 的合并由脚本在最新索引上重做一遍（幂等）。
-          for attempt in 1 2 3; do
-            git add pdfs/
-            if git diff --cached --quiet; then
-              echo "pdfs/ 没有需要提交的改动（本次结果已在索引里），结束"
-              exit 0
-            fi
-            git commit -m "$msg"
-            if git push origin HEAD:main; then
-              echo "已推送 pdfs/（第 $attempt 次尝试）"
-              exit 0
-            fi
-
-            echo "第 $attempt 次推送失败，取最新 main 后重试…"
-            git fetch --depth=1 origin main
-            git reset --mixed FETCH_HEAD                    # HEAD/索引对齐远端
-            git checkout -- pdfs/ 2>/dev/null || true       # 历史 index.json 用远端的
-            publish                                         # 在最新索引上重新合并
-          done
-
-          echo "::error::推送 pdfs/ 失败（已重试 3 次）；artifact 仍可下载"
-          exit 1
-
+      # ---------------------------------------------------------------- 失败时的日志
       - name: 上传编译日志（失败时）
         if: failure()
         uses: actions/upload-artifact@v4
