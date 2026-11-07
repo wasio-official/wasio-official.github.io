@@ -13,7 +13,7 @@
      固定 210mm × 297mm 的 .pg-sheet；分页只发生在题目 / 段落边界，
      不会把一行字切断（超高题在段落边界续页，见 pbSplitBlock）。
    - 题卷默认一题一页；题干 < 350 字且图片 ≤ 2 的短题不强制分页，允许自然连排。
-   - 答案卷自然连排；「解析：」「答案：」为空时整段省略。
+   - 答案卷自然连排；只排题干 + 「解析：」，不排末尾「答案：」。
    - 正文（含图片）严格按源数据顺序渲染：这里**不做任何图片重排**。
      图片位置由题库数据本身决定，渲染层只负责把相对路径补成
      data/images/<slug>/... 并保证尺寸 / 加载失败占位。
@@ -823,7 +823,7 @@ function pbPrependNo(host, cn) {
   pbLabelInto(host, `<span class="q-no">${pbEsc(cn)}、</span>`, "p");
 }
 
-/** 「解析：」「答案：」段落：标签加粗，跟在第一段开头 */
+/** 「解析：」段落：标签加粗，跟在第一段开头 */
 function pbAnswerSection(text, slug, label) {
   const t = String(text || "").trim();
   if (!t) return null;
@@ -868,10 +868,12 @@ function pbBuildItem(item, idx, mode) {
     const box = document.createElement("div");
     box.className = "q-ans";
     let added = 0;
+    // 只排解析，不排「答案：」段。
+    // 用户要的是「题干 + 解析」，末尾那句最终答案先不印（他还要统改答案）。
+    // 想恢复的话，把下面这一行取消注释即可。
+    // const answer = pbAnswerSection(q.answer, item.slug, "答案");
     const analysis = pbAnswerSection(q.analysis, item.slug, "解析");
     if (analysis) { box.appendChild(analysis); added++; }
-    const answer = pbAnswerSection(q.answer, item.slug, "答案");
-    if (answer) { box.appendChild(answer); added++; }
     if (added) art.appendChild(box);
   }
 
