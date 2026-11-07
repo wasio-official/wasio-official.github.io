@@ -79,7 +79,10 @@
       ignoreHtmlClass: "no-mathjax"
     },
     // SVG 输出：字形是内嵌 path，不额外下载 woff 字体，断网也能正确显示。
-    svg: { fontCache: "global" },
+    // ⚠️ 这里必须是 "local"（每个公式自带 <defs>），不能是 "global"：
+    //    「下载 PDF」用 html2canvas 逐页把内联 SVG 序列化成图片，global 缓存的
+    //    字形定义在 <body> 的隐藏 SVG 里，序列化单个公式 SVG 时会引用不到而丢字。
+    svg: { fontCache: "local" },
     startup: { typeset: false }
   };
 </script>
@@ -120,6 +123,14 @@
    打印时只保留 #paper；@page 负责真正的页边距，
    屏幕上的 210mm 纸面只是「所见即所得」的预览。
    ============================================================ */
+
+/* html2canvas 不认 MathJax 给无障碍副本加的裁剪样式，
+   会把 <mjx-assistive-mml> 里的 MathML 也画一遍，
+   于是公式出现重影（字形叠字形）。导出页直接隐藏它。
+   打印走浏览器排版，不受影响。 */
+mjx-assistive-mml {
+  display: none !important;
+}
 
 @page {
   size: A4;
@@ -281,21 +292,101 @@
   color: var(--ink-mute);
 }
 
-/* ---------- A4 纸面 ---------- */
+.pg-progress {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.pg-progress[hidden] { display: none; }
 
+/* 降级提示时给打印按钮描一圈，引导用户改走打印 */
+.pg-print-hint {
+  border-color: #e0a19c;
+  color: #b3261e;
+}
+
+/* ---------- A4 页式预览 ---------- */
+
+/* #paper 只是外层容器：真正的纸面是下面一页一个的 .pg-sheet。
+   预览缩放用 transform 加在 .pg-pages 外层，.pg-sheet 本身永远是
+   210mm × 297mm —— 这样 html2canvas 抓到的画布尺寸才稳定。 */
 .pg-paper {
-  width: 210mm;
-  max-width: 100%;
-  min-height: 120mm;
+  position: relative;
+  width: 100%;
   margin: 0 auto;
-  padding: 18mm 16mm;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  color: #111;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.pg-pages {
+  transform-origin: top center;
+}
+
+.pg-pages-outer.is-scaled {
+  position: relative;
+}
+.pg-pages-outer.is-scaled .pg-pages {
+  position: absolute;
+  left: 50%;
+  width: 210mm;
+  margin-left: -105mm;
+}
+
+/* 预览外框：边框 / 圆角 / 阴影都在外层，截图只抓白纸本身 */
+.pg-sheet-wrap {
+  width: 210mm;
+  margin: 0 auto 18px;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 6px;
   box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* 固定 A4 尺寸 + overflow:hidden：分页在生成阶段就做完 */
+.pg-sheet {
+  box-sizing: border-box;
+  width: 210mm;
+  height: 297mm;
+  padding: 18mm 16mm;
+  overflow: hidden;
+  background: #fff;
   color: #111;
   font-size: 15px;
   line-height: 1.8;
+  text-align: left;
+}
+
+/* 测量容器：宽度必须等于 .pg-sheet 的版心（178mm），否则量出的高度对不上。
+   它参与布局（MathJax 才能正确排版），但不显示、不占位。 */
+.pg-staging {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 178mm;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 下载 PDF 时把预览缩放临时恢复成 1:1，抓图才是 A4 真实尺寸 */
+body.pg-capturing .pg-pages-outer {
+  height: auto !important;
+  overflow: visible !important;
+}
+body.pg-capturing .pg-pages {
+  position: static !important;
+  width: auto !important;
+  margin-left: 0 !important;
+  transform: none !important;
 }
 
 .pg-empty {
@@ -423,6 +514,13 @@
 .q-ans .q-md:first-child { margin-top: 0; }
 .q-label { font-weight: 700; }
 
+/* 超长题 / 长解析在段落边界拆到下一页时，续页不再重复答案分隔线 */
+.q-item.q-cont .q-ans {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
 .pg-paper .math-block {
   margin: .6em 0;
   text-align: center;
@@ -434,18 +532,12 @@
   max-width: 100%;
 }
 
-/* ---------- 窄屏：纸面改为流式，打印仍走 A4 ---------- */
+/* ---------- 窄屏：整叠纸面等比缩小预览，打印仍走 A4 ---------- */
 
 @media (max-width: 820px) {
-  .pg-paper {
-    width: 100%;
-    min-height: 0;
-    padding: 18px 16px;
-    border-radius: var(--radius);
-    font-size: 14.5px;
-  }
-  .sheet-title { font-size: 1.5em; }
-  .sheet-head { margin-bottom: 18px; }
+  /* JS 算 transform 缩放；万一脚本没跑起来，至少还能横向滚动看全 */
+  .pg-pages-outer { overflow-x: auto; }
+  .pg-sheet-wrap { margin-bottom: 14px; }
   .pg-actions .btn { flex: 1 1 auto; }
 }
 
@@ -461,7 +553,8 @@
   .no-print,
   .pg-empty,
   .pg-msg,
-  .pg-status {
+  .pg-status,
+  .pg-progress {
     display: none !important;
   }
   .wrap.pg-wrap {
@@ -469,19 +562,59 @@
     margin: 0;
     padding: 0;
   }
-  .pg-paper {
+
+  /* 屏幕上是固定的 A4 页容器；打印时交回浏览器按 @page 自然排版，
+     文字才能保持「可选中」的高质量。 */
+  .pg-paper,
+  .pg-pages-outer {
+    position: static !important;
     width: auto;
     max-width: none;
     min-height: 0;
+    height: auto !important;
     margin: 0;
     padding: 0;
     border: 0;
     border-radius: 0;
     box-shadow: none;
+    overflow: visible !important;
     font-size: 10.5pt;
     line-height: 1.7;
     color: #000;
   }
+  .pg-pages {
+    position: static !important;
+    width: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+  .pg-sheet-wrap {
+    width: auto;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    break-after: page;
+    page-break-after: always;
+  }
+  .pg-sheet-wrap:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+  .pg-sheet {
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    overflow: visible;
+    font-size: 10.5pt;
+    line-height: 1.7;
+    color: #000;
+  }
+
   .sheet-head { margin-bottom: 14pt; }
   .sheet-title { font-size: 1.9em; }
   .sheet-sub { font-size: 1.05em; }
@@ -496,27 +629,8 @@
   .q-ans { margin-top: 8pt; padding-top: 6pt; }
   .q-label { break-after: avoid; page-break-after: avoid; }
 
-  /* 题卷：默认一题一页；短题（<350 字且图 ≤2）不强制分页，允许自然连排 */
-  .part-questions .q-item {
-    break-after: page;
-    page-break-after: always;
-  }
-  .part-questions .q-item.q-short {
-    break-after: auto;
-    page-break-after: auto;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-  .part-questions .q-item:last-child {
-    break-after: auto;
-    page-break-after: auto;
-  }
-
-  /* 答案卷：自然连排，不强行一题一页 */
-  .part-answers .q-item {
-    break-inside: auto;
-    page-break-inside: auto;
-  }
+  /* 分页已经在生成阶段做完（每个 .pg-sheet-wrap 就是一页），
+     打印时不再按「一题一页」强制拆页；一页内交给浏览器自然排。 */
 
   /* 整份：题卷与答案卷各自从新页开始 */
   .paper-part + .paper-part {
@@ -544,7 +658,7 @@
   <section class="page-head no-print">
     <h1>网页出卷</h1>
     <p class="page-desc">
-      把组卷目录排成 A4 文档，再用浏览器「打印 → 存为 PDF」拿到文件。
+      把组卷目录排成 A4 文档：点「下载 PDF」直接拿到文件，或用「打印 → 存为 PDF」。
       题目在页面里现场渲染，<b>JSON 不会上传，也不会出现在站点任何地方</b>。
     </p>
   </section>
@@ -566,12 +680,19 @@
       </label>
     </div>
     <div class="pg-actions">
-      <button class="btn btn-primary" id="pg-print-q" type="button" disabled>打印题卷</button>
+      <button class="btn btn-primary" id="pg-dl-q" type="button" disabled>下载题卷 PDF</button>
+      <button class="btn" id="pg-dl-a" type="button" disabled>下载答案卷 PDF</button>
+      <button class="btn" id="pg-dl-both" type="button" disabled>下载整份 PDF</button>
+    </div>
+    <p class="pg-progress" id="pg-progress" hidden aria-live="polite"></p>
+    <div class="pg-actions pg-actions-print">
+      <button class="btn" id="pg-print-q" type="button" disabled>打印题卷</button>
       <button class="btn" id="pg-print-a" type="button" disabled>打印答案卷</button>
       <button class="btn" id="pg-print-both" type="button" disabled>打印整份</button>
     </div>
-    <p class="pg-note">
-      点按钮后在打印对话框里选「另存为 PDF」。文件不会上传，全部在本机生成。
+    <p class="pg-note" id="pg-dl-note">
+      「下载 PDF」在本机直接生成文件（每页是一张 2× 渲染的图片，文字不可选中）；
+      「打印」仍保留，打印或另存出来的文字可选中、质量更高。
     </p>
   </section>
 
@@ -594,7 +715,7 @@
     <p class="pg-status" id="pg-status">正在读取本机组卷…</p>
   </section>
 
-  <section id="paper" class="pg-paper" aria-live="polite"></section>
+  <section id="paper" class="pg-paper pg-pages-outer" aria-live="polite"></section>
 
 </main>
 
@@ -609,6 +730,10 @@
 <script src="assets/version.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/paperset.js"></script>
+<!-- PDF 生成库：自托管，本地引用（不依赖任何 CDN，断网也能用）。
+     jspdf.umd.min.js = jsPDF 2.5.2；html2canvas.min.js = html2canvas 1.4.1 -->
+<script src="assets/vendor/jspdf.umd.min.js"></script>
+<script src="assets/vendor/html2canvas.min.js"></script>
 <script src="assets/pdfbuild.js"></script>
 </body>
 </html>
