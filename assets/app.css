@@ -572,7 +572,9 @@ select.ctl:focus {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin: 0 0 14px;
+  /* 上边距不能是 0：题目页的「返回试卷目录 / 下一题」导航就在它正上方，
+     两者顶在一起时按钮的下边框会被这条色块压得看不见（实测底边同为 y=1980）。 */
+  margin: 18px 0 14px;
   padding: 10px 14px;
   background: var(--accent-soft);
   border: 1px solid var(--accent-line, var(--line));
@@ -775,6 +777,11 @@ select.ctl:focus {
 .dims {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(94px, 1fr));
+  /* 行高只按内容算，绝不让某一行被拉高：
+     最后一排只剩两三张卡时，一旦栅格所在容器有机会被拉伸，
+     这几张卡会被撑成一整条高盒子，和第一排完全不成比例。 */
+  grid-auto-rows: min-content;
+  align-items: start;
   gap: 8px;
   margin-bottom: 14px;
 }
@@ -782,6 +789,10 @@ select.ctl:focus {
   background: var(--bg-subtle);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
+  /* 定一个最小高度：某个维度值为空（显示「—」）时，
+     卡片也不会比同行矮一截，整排保持齐平。 */
+  min-height: 56px;
+  box-sizing: border-box;
 }
 .dim-k { font-size: 11px; color: var(--ink-mute); letter-spacing: 0.02em; }
 .dim-v {
