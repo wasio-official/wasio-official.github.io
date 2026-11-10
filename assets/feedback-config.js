@@ -12,12 +12,20 @@
    idMode：参数里的“卷名”用哪个字段 ——
      "name" 用试卷中文名（便于人排查，默认）
      "slug" 用试卷 slug（便于和 URL 参数一一对应）
+
+   submitFormUrl：**试卷投稿**表单（submit.html 用），与上面的纠错反馈是两个
+     不同的金数据表单。留空 = 投稿页显示「投稿通道暂未开放」，不会出现坏链接。
    ============================================================ */
 window.FEEDBACK_CONFIG = {
   // 金数据「网站问题反馈」表单（2026-11-10 接入）。
   // 探针实测 200；站点只会在这个地址后面追加 ?x_field_1=<上下文>，
   // 与金数据「链接扩展属性」的拼法一致（后台那套「生成链接」只是手工助手）。
   formUrl: "https://ews48ewb.jsjform.com/f/Eux3lR",
+
+  // 金数据「试卷提交」表单（2026-11-10 接入）：第一题上传试卷文件（≤20MB），
+  // 第二题「希望你被称呼的名字」，用于荣誉墙。只在 submit.html 使用。
+  submitFormUrl: "https://ews48ewb.jsjform.com/f/KYh6Lt",
+
   paramName: "x_field_1",
   idMode: "name"
 };

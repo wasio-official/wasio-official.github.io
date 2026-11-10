@@ -389,7 +389,11 @@
     var input = node("input", "fb-link");
     input.type = "text";
     input.readOnly = true;
-    input.value = url;
+    // 显示用解码后的形式：`%EF%BD%9C` 这类百分号串人看不懂，中文原样更好读；
+    // 复制/打开时浏览器会自动重新编码，功能不受影响。
+    var shown = url;
+    try { shown = decodeURIComponent(url); } catch (e) { shown = url; }
+    input.value = shown;
     input.setAttribute("aria-label", "反馈问卷链接");
     var copy = node("button", "btn fb-copy", "复制链接");
     copy.type = "button";
