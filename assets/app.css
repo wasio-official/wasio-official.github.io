@@ -949,13 +949,16 @@ select.ctl:focus {
 
 /* ---------------------------------------------------------- 状态 */
 
-.empty {
+.empty:not(.dim-v) {
   text-align: center;
   padding: 60px 20px;
   color: var(--ink-mute);
   font-size: 14.5px;
 }
-.empty strong { display: block; font-size: 16px; color: var(--ink-soft); margin-bottom: 6px; }
+/* 排除 .dim-v：难度卡片里「值为空」用的是 `<div class="dim-v empty">`，
+   会被这条空状态规则套上 60px 上下内边距 + 14.5px 字号，
+   结果一张卡片被撑到 175px 高（正常 57px）。见 .dim-v.empty。 */
+.empty:not(.dim-v) strong { display: block; font-size: 16px; color: var(--ink-soft); margin-bottom: 6px; }
 
 /* 引导态里的补充提示（如「还可以再用难度收窄」），比正文更弱一级 */
 .empty-tip { display: inline-block; margin-top: 4px; font-size: 13.5px; color: var(--ink-mute); }
