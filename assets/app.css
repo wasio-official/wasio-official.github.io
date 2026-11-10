@@ -1200,3 +1200,266 @@ select.ctl:focus {
     white-space: nowrap;
   }
 }
+
+/* ---------- 纠错反馈 ---------- */
+
+/* 右下角悬浮入口。只在配置了问卷、且是题库/考点/试卷/单题页时由 feedback.js 插入；
+   配色全部沿用站内变量（--accent 系），和 .btn-primary 一致。 */
+.fb-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: background .16s, transform .16s;
+}
+
+.fb-fab:hover { background: var(--accent-ink); }
+.fb-fab:active { transform: translateY(1px); }
+.fb-fab:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 2px; }
+
+/* 面板打开时收起按钮，避免和遮罩层叠在一起 */
+.fb-open .fb-fab { display: none; }
+
+/* 遮罩：铺满视口，点空白处关闭 */
+.fb-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(20, 26, 38, .45);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+/* display:flex 会盖掉 hidden 的默认 display:none，这里补回来 */
+.fb-overlay[hidden] { display: none; }
+
+.fb-panel {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 18px 20px 20px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  color: var(--ink);
+  text-align: left;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fb-panel:focus { outline: none; }
+
+.fb-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 2px;
+}
+
+.fb-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+.fb-close {
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-mute);
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fb-close:hover { background: var(--bg-subtle); color: var(--ink); }
+.fb-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.fb-desc {
+  margin: 6px 0 12px;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+.fb-hint {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-mute);
+  text-align: center;
+}
+
+/* 二维码容器：打开面板时才填充内容，失败时这里显示文字兜底 */
+.fb-qr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 196px;
+  margin: 4px 0 2px;
+  color: var(--ink-mute);
+  font-size: 13px;
+}
+
+.fb-qr canvas,
+.fb-qr table,
+.fb-qr img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* 链接行：只读输入框 + 复制按钮 */
+.fb-linkrow {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.fb-link {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  font: 12px/1.5 var(--mono);
+  color: var(--ink-soft);
+  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.fb-link:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.fb-copy {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.fb-actions { margin: 12px 0 0; }
+
+.fb-open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 42px;
+  font-size: 14.5px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.fb-open:hover { color: #fff; text-decoration: none; }
+
+/* 手机端：面板底部弹起，只给一个直达问卷的大按钮 */
+.fb-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 50px;
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+}
+
+.fb-go:hover {
+  color: #fff;
+  text-decoration: none;
+  background: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+
+/* 二维码生成失败 / 库加载失败时的文字兜底（把链接本身显示出来） */
+.fb-fallback {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--ink-mute);
+  text-align: center;
+}
+
+.fb-fallback-url {
+  margin-top: 6px;
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  word-break: break-all;
+}
+
+/* 给固定按钮让出底部空间：滚到页尾时不会压住最后一行内容
+   （单题页底部有 .q-nav / .ps-bar，页尾留白同样受益） */
+.fb-has-fab .wrap { padding-bottom: 88px; }
+.fb-has-fab .footer { padding-bottom: 92px; }
+
+@media (max-width: 767px) {
+  .fb-fab {
+    right: 14px;
+    bottom: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    width: 52px;
+    height: 52px;
+    font-size: 12.5px;
+  }
+
+  .fb-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .fb-panel {
+    width: 100%;
+    max-width: none;
+    max-height: 88vh;
+    padding: 18px 18px 22px;
+    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 16px 16px 0 0;
+  }
+}
+
+@media print {
+  .fb-fab,
+  .fb-overlay { display: none !important; }
+  .fb-has-fab .wrap,
+  .fb-has-fab .footer { padding-bottom: 0; }
+}
