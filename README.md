@@ -2,7 +2,8 @@
 
 高中物理竞赛试卷与题目的在线题库，配套 GitHub Pages 静态站点。
 
-**线上地址**：<https://wasio-official.github.io/>
+**线上地址**：<https://wasio-official.github.io/problems/>
+（旧地址 <https://wasio-official.github.io/> 由根目录跳转壳自动带过去，仍然有效。）
 
 ---
 
