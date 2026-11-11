@@ -3,144 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wasio的考点导航 — 物理竞赛题库</title>
-<link rel="stylesheet" href="assets/app.css">
-<link rel="icon" href="assets/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" href="assets/icon-192.png" sizes="192x192">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<meta name="theme-color" content="#2f6fd0">
+<meta name="robots" content="noindex">
+<title>考点已搬到 /problems/</title>
+<link rel="canonical" href="https://wasio-official.github.io/problems/tags.html">
 <script>
-/* 兜底提示（所有页面通用）：本站正文全靠 JS 渲染，脚本一旦解析或执行失败
-   （例如旧版 Safari 不支持某些新语法）就是纯白屏、毫无提示。
-   这段刻意写成 ES5 —— 没有箭头函数、const/let、模板字符串、?.、?? ——
-   保证在「导致 app.js 报错的那个老浏览器」里它自己还能跑起来。
-   同一页面只提示一次；图片等资源 404 不提示（那时 e.target 不是 window）。 */
+/* 站点已迁到 /problems/ 下，这里只负责把旧地址原样带过去：
+   保留查询串（?id=… / ?p=…&q=…）和锚点（#search），不丢参数。 */
 (function () {
-  var shown = false;
-  function paint(msg) {
-    if (shown) return;
-    shown = true;
-    var text = "页面加载出错：" + msg + "　请使用最新版 Chrome / Safari，或刷新重试";
-    function put() {
-      try {
-        var bar = document.createElement("div");
-        bar.id = "compat-js-error";
-        bar.setAttribute("role", "alert");
-        bar.style.cssText =
-          "position:fixed;left:0;right:0;top:0;z-index:2147483647;" +
-          "background:#1f2430;color:#fff;border-bottom:1px solid #000;" +
-          "padding:10px 14px;text-align:center;" +
-          "font:14px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;" +
-          "box-shadow:0 2px 10px rgba(0,0,0,.35);";
-        bar.textContent = text;
-        var host = document.body || document.documentElement;
-        host.insertBefore(bar, host.firstChild);
-      } catch (err) { /* 提示条自己失败就算了，别再连带把页面搞崩 */ }
-    }
-    if (document.body) put();
-    else if (document.addEventListener) document.addEventListener("DOMContentLoaded", put, false);
-    else setTimeout(put, 0);
-  }
-  function brief(v) {
-    var s = "";
-    if (v && v.message) s = String(v.message);
-    else if (v) s = String(v);
-    s = s.replace(/\s+/g, " ");
-    if (s.length > 80) s = s.slice(0, 80) + "…";
-    return s || "未知错误";
-  }
-  if (!window.addEventListener) return;
-  window.addEventListener("error", function (e) {
-    if (!e || (e.target && e.target !== window)) return;
-    if (e.error) paint(brief(e.error));
-    else if (e.message) paint(brief(e.message));
-  }, false);
-  window.addEventListener("unhandledrejection", function (e) {
-    paint(brief(e && e.reason));
-  }, false);
+  var target = "/problems/tags.html" + location.search + location.hash;
+  location.replace(target);
 })();
 </script>
+<style>
+  body { margin: 0; padding: 40px 20px; font: 15px/1.7 -apple-system, BlinkMacSystemFont,
+         "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+         color: #4a5160; background: #f7f8fa; text-align: center; }
+  a { color: #2f6fd0; }
+  .tip { margin-top: 10px; font-size: 13px; color: #8a919e; }
+</style>
 </head>
 <body>
-<noscript>
-  <div style="margin:0;padding:14px 16px;background:#1f2430;color:#fff;text-align:center;font:15px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;">
-    本页面需要启用 JavaScript 才能显示题目。
-  </div>
-</noscript>
-
-<header class="topbar"><div class="topbar-inner"></div></header>
-
-<main class="wrap">
-
-  <section class="page-head">
-    <h1>考点导航</h1>
-    <p class="page-desc">
-      按「一级 → 二级 → 三级 → 四级」考点逐级收窄，跨试卷汇总该考点下的全部题目；
-      也可以直接用关键词检索考点或试卷名。
-    </p>
-  </section>
-
-  <div class="toolbar" id="search">
-    <label class="search">
-      <input id="f-q" type="search" placeholder="搜索考点或试卷名…" autocomplete="off">
-    </label>
-    <div class="cascade">
-      <select class="ctl" id="f-l1" aria-label="一级考点"></select>
-      <select class="ctl" id="f-l2" aria-label="二级考点" disabled></select>
-      <select class="ctl" id="f-l3" aria-label="三级考点" disabled></select>
-      <select class="ctl" id="f-l4" aria-label="四级考点" disabled></select>
-
-      <!-- 两个难度维度，互相独立、可同时生效（交集）：
-           ① 数值难度 D（0–8）：区间筛选，选项由 difficulty.values 动态填充
-           ② 文字档位（简单/中等/中上/较难）：单选，由 difficulty.texts 填充
-           两者都不写死刻度，改 build.py 的 DIFFICULTY 即可整体调整。 -->
-      <span class="diff" id="f-diff" hidden>
-        <span class="diff-label">难度 D</span>
-        <select class="ctl ctl-diff" id="f-dmin" aria-label="难度下限" hidden></select>
-        <span class="diff-sep" aria-hidden="true">–</span>
-        <select class="ctl ctl-diff" id="f-dmax" aria-label="难度上限" hidden></select>
-      </span>
-
-      <span class="diff" id="f-dtext-wrap" hidden>
-        <span class="diff-label">档次</span>
-        <select class="ctl ctl-diff" id="f-dtext" aria-label="难度档次" hidden></select>
-      </span>
-
-      <button class="ctl ctl-btn" id="f-reset" type="button">重置</button>
-    </div>
-  </div>
-
-  <div id="crumb-path" class="crumb-path"></div>
-
-  <div id="ps-bar"></div>
-
-  <p class="result-line" id="result-line"></p>
-
-  <div class="q-list" id="q-list">
-    <div class="loading">
-      <div class="spinner"></div>
-      正在加载考点数据…
-    </div>
-  </div>
-
-</main>
-
-<footer class="footer">
-  <p class="footer-line">
-    物理竞赛题库 · 内容来自个人整理的竞赛试卷资料，仅供学习交流使用。
-  </p>
-  <p class="footer-line footer-bili"><a href="https://space.bilibili.com/1382640092" target="_blank" rel="noopener">WASIO 的 B 站主页</a></p>
-  <p class="footer-line footer-visits" id="visit-count" hidden>本站总访客数 <span id="visit-uv">—</span> 人</p>
-  <p class="footer-line footer-ver" id="site-ver" hidden></p>
-</footer>
-
-<script src="assets/version.js"></script>
-<script src="assets/app.js"></script>
-<script src="assets/feedback-config.js"></script>
-<script src="assets/feedback.js"></script>
-<script src="assets/fuzzy.js"></script>
-<script src="assets/paperset.js"></script>
-<script src="assets/tags.js"></script>
-<script src="assets/visits.js"></script>
+  <p>考点已经搬到新地址，正在跳转…</p>
+  <p><a href="/problems/tags.html">如果没有自动跳转，点这里</a></p>
+  <p class="tip">站点根目录改为 /problems/，旧链接会一直有效。</p>
 </body>
 </html>

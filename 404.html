@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>页面已搬家</title>
+<script>
+/* 站点迁到 /problems/ 之后，旧的深链接（含 ?p=…&q=…）会落到这里。
+   把「原路径 + 查询串 + 锚点」整体带到新前缀下再试一次。 */
+(function () {
+  var p = location.pathname.replace(/^\/+/, "");
+  var target = "/problems/" + p + location.search + location.hash;
+  location.replace(target);
+})();
+</script>
+<style>
+  body { margin: 0; padding: 40px 20px; font: 15px/1.7 -apple-system, BlinkMacSystemFont,
+         "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+         color: #4a5160; background: #f7f8fa; text-align: center; }
+  a { color: #2f6fd0; }
+</style>
+</head>
+<body>
+  <p>页面已搬家，正在跳转…</p>
+  <p><a href="/problems/">回到题库首页</a></p>
+</body>
+</html>

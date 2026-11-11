@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wasio的物理竞赛题库</title>
+<meta name="description" content="高中物理竞赛题库：试卷、题目、详细解析与答案，含难度评分与考点标签。">
+<link rel="stylesheet" href="assets/app.css">
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="assets/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="theme-color" content="#2f6fd0">
+<script>
+/* 兜底提示（所有页面通用）：本站正文全靠 JS 渲染，脚本一旦解析或执行失败
+   （例如旧版 Safari 不支持某些新语法）就是纯白屏、毫无提示。
+   这段刻意写成 ES5 —— 没有箭头函数、const/let、模板字符串、?.、?? ——
+   保证在「导致 app.js 报错的那个老浏览器」里它自己还能跑起来。
+   同一页面只提示一次；图片等资源 404 不提示（那时 e.target 不是 window）。 */
+(function () {
+  var shown = false;
+  function paint(msg) {
+    if (shown) return;
+    shown = true;
+    var text = "页面加载出错：" + msg + "　请使用最新版 Chrome / Safari，或刷新重试";
+    function put() {
+      try {
+        var bar = document.createElement("div");
+        bar.id = "compat-js-error";
+        bar.setAttribute("role", "alert");
+        bar.style.cssText =
+          "position:fixed;left:0;right:0;top:0;z-index:2147483647;" +
+          "background:#1f2430;color:#fff;border-bottom:1px solid #000;" +
+          "padding:10px 14px;text-align:center;" +
+          "font:14px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;" +
+          "box-shadow:0 2px 10px rgba(0,0,0,.35);";
+        bar.textContent = text;
+        var host = document.body || document.documentElement;
+        host.insertBefore(bar, host.firstChild);
+      } catch (err) { /* 提示条自己失败就算了，别再连带把页面搞崩 */ }
+    }
+    if (document.body) put();
+    else if (document.addEventListener) document.addEventListener("DOMContentLoaded", put, false);
+    else setTimeout(put, 0);
+  }
+  function brief(v) {
+    var s = "";
+    if (v && v.message) s = String(v.message);
+    else if (v) s = String(v);
+    s = s.replace(/\s+/g, " ");
+    if (s.length > 80) s = s.slice(0, 80) + "…";
+    return s || "未知错误";
+  }
+  if (!window.addEventListener) return;
+  window.addEventListener("error", function (e) {
+    if (!e || (e.target && e.target !== window)) return;
+    if (e.error) paint(brief(e.error));
+    else if (e.message) paint(brief(e.message));
+  }, false);
+  window.addEventListener("unhandledrejection", function (e) {
+    paint(brief(e && e.reason));
+  }, false);
+})();
+</script>
+</head>
+<body class="landing">
+<noscript>
+  <div style="margin:0;padding:14px 16px;background:#1f2430;color:#fff;text-align:center;font:15px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;">
+    本页面需要启用 JavaScript 才能显示题目。
+  </div>
+</noscript>
+
+<header class="topbar"><div class="topbar-inner"></div></header>
+
+<main class="wrap">
+
+  <section class="hero hero-center">
+    <h1>物理竞赛题库</h1>
+    <div class="sub">Physics Olympiad Problem Bank</div>
+    <p class="hero-note">
+      高中物理竞赛试卷与题目合集 —— 每题附完整题干、详细解析与答案，
+      并标注难度评分与考点标签。
+    </p>
+
+    <div class="stats stats-center">
+      <div>
+        <div class="stat-num" id="stat-papers">—</div>
+        <div class="stat-label">套试卷</div>
+      </div>
+      <div>
+        <div class="stat-num" id="stat-questions">—</div>
+        <div class="stat-label">道题目</div>
+      </div>
+      <div>
+        <div class="stat-num" id="stat-images">—</div>
+        <div class="stat-label">张配图</div>
+      </div>
+    </div>
+
+    <div class="landing-actions">
+      <a class="entry entry-primary" href="library.html">
+        <span class="entry-title">进入题库</span>
+        <span class="entry-desc">浏览全部试卷与题目</span>
+      </a>
+      <a class="entry" href="tags.html">
+        <span class="entry-title">考点导航</span>
+        <span class="entry-desc">按四级考点逐级筛题</span>
+      </a>
+      <a class="entry" href="library.html#search">
+        <span class="entry-title">搜索题目</span>
+        <span class="entry-desc">按试卷名或考点标签查找</span>
+      </a>
+    </div>
+
+    <!-- 投稿入口：故意比上面三张卡轻一档（虚线窄条），不抢主视觉 -->
+    <a class="landing-submit" href="submit.html">
+      <span>有卷子想分享？投稿后可以上荣誉墙</span>
+      <span class="ls-arrow">去看看 →</span>
+    </a>
+  </section>
+
+</main>
+
+<footer class="footer footer-center">
+  <p class="footer-line">
+    物理竞赛题库 · 内容来自个人整理的竞赛试卷资料，仅供学习交流使用。
+  </p>
+  <p class="footer-line footer-bili"><a href="https://space.bilibili.com/1382640092" target="_blank" rel="noopener">WASIO 的 B 站主页</a></p>
+  <p class="footer-line footer-visits" id="visit-count" hidden>本站总访客数 <span id="visit-uv">—</span> 人</p>
+  <p class="footer-line footer-ver" id="site-ver" hidden></p>
+</footer>
+
+<script src="assets/version.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/landing.js"></script>
+<script src="assets/visits.js"></script>
+</body>
+</html>

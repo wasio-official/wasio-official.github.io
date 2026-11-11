@@ -48,17 +48,19 @@ HERE = Path(__file__).resolve().parent
 
 
 def _locate_repo() -> Path:
-    """定位站点仓库（题库 data/ 的父目录），两套布局都要能用。
+    """定位站点仓库（题库 data/ 的父目录），三种布局都要能用。
 
-    1) 入仓布局   <repo>/tools/pdfgen.py  → 上一级就是仓库根，题库在 <repo>/data；
-    2) 仓库外布局 Github page/pdfgen.py   → 同级目录 wasio-official.github.io/data。
+    1) 入仓布局（当前） <repo>/tools/pdfgen.py → 题库在 <repo>/problems/data；
+    2) 入仓旧布局       <repo>/tools/pdfgen.py → 题库在 <repo>/data（迁移前）；
+    3) 仓库外布局       Github page/pdfgen.py  → 同级目录 wasio-official.github.io/problems/data。
 
-    先看「本文件的上一级是否就是带 data/ 的仓库根」，是就用它（GitHub Actions
-    只能看到仓库内的文件，必须走这条）；否则回落到原来的同级目录。
+    先用「本文件上一级 + problems/data」，再退回「上一级 + data」，
+    最后才回落到同级目录（GitHub Actions 只能看到仓库内文件，必须命中前两条）。
     """
     parent = HERE.parent
-    if (parent / "data" / "papers").is_dir():
-        return parent
+    for cand in (parent / "problems" / "data" / "papers", parent / "data" / "papers"):
+        if cand.is_dir():
+            return cand.parent.parent
     return HERE / "wasio-official.github.io"
 
 
