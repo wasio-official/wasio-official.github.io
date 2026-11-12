@@ -1598,64 +1598,37 @@ select.ctl:focus {
   color: var(--ink-soft);
 }
 
-/* ---- 荣誉墙 ---- */
+/* ---- 荣誉墙：卡片，只有名字 + 一句话，不排名 ---- */
 .contrib-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 .contrib-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  flex: 1 1 240px;
+  max-width: 320px;
+  min-width: 0;
   background: var(--bg-subtle);
   border-radius: var(--radius-sm);
-  padding: 12px 14px;
-}
-.contrib-rank {
-  flex: 0 0 auto;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink-mute);
-  background: var(--bg-elev);
-  border: 1px solid var(--line);
-}
-.contrib-card.is-top .contrib-rank {
-  color: #fff;
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.contrib-top {
-  flex: 1 1 auto;
-  min-width: 0;
+  padding: 15px 18px 16px;
 }
 .contrib-name {
-  font-size: 14.5px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.contrib-blurb {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ink-mute);
+  margin-top: 6px;
 }
 .contrib-detail {
   font-size: 12.5px;
   color: var(--ink-mute);
   margin-top: 2px;
-}
-.contrib-count { color: var(--accent-ink); font-weight: 600; }
-.contrib-note {
-  font-size: 12.5px;
-  color: var(--ink-soft);
-  margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .contrib-empty {
   text-align: center;
@@ -1706,6 +1679,6 @@ select.ctl:focus {
   .submit-qr { margin: 0 auto; }
   .submit-go, .submit-open { display: block; text-align: center; }
   .submit-linkrow { flex-direction: column; }
-  .contrib-grid { grid-template-columns: 1fr; }
+  .contrib-card { flex-basis: 100%; max-width: none; }
   .landing-submit { font-size: 13.5px; padding: 11px 14px; }
 }

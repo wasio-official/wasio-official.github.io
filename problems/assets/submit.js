@@ -351,59 +351,42 @@
     return [];
   }
 
+  /* 每位贡献者只有「名字 + 一句话」两层信息。
+     份数不单独做成数字（那会变成排名），只自然写进那句话里。 */
   function normalize(c) {
     if (!c || typeof c !== "object") return null;
     var name = trim(c.name);
     if (!name) return null;
-    var n = Number(c.count);
-    if (!isFinite(n) || n < 0) n = 0;
     return {
       name: name,
-      count: Math.floor(n),
-      date: trim(c.date),
-      note: trim(c.note)
+      blurb: trim(c.blurb || c.note || c.line),
+      date: trim(c.date)
     };
   }
 
+  /* 按「谁先来」排，不按份数：日期早的在前，没写日期的排在后面。 */
   function sortContributors(list) {
     list.sort(function (a, b) {
-      if (b.count !== a.count) return b.count - a.count;
-      if (a.date !== b.date) return a.date < b.date ? 1 : -1;  // date 降序
+      if (a.date !== b.date) {
+        if (a.date && b.date) return a.date < b.date ? -1 : 1;
+        return a.date ? -1 : 1;
+      }
       return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0);
     });
     return list;
   }
 
-  function contribCard(c, index) {
+  function contribCard(c) {
     var card = node("article", "contrib-card");
-
-    var top = node("div", "contrib-top");
-    var rank = node("div", "contrib-rank" + (index < 3 ? " is-top" : ""), String(index + 1));
-    rank.setAttribute("aria-hidden", "true");
-    top.appendChild(rank);
-    top.appendChild(node("div", "contrib-name", c.name));
-    card.appendChild(top);
-
-    var cnt = node("div", "contrib-count");
-    cnt.appendChild(node("span", null, "投稿 "));
-    cnt.appendChild(node("b", null, String(c.count)));
-    cnt.appendChild(node("span", null, " 份"));
-    card.appendChild(cnt);
-
-    if (c.note) card.appendChild(node("p", "contrib-note", c.note));
-    if (c.date) {
-      var d = node("div", "contrib-date", c.date);
-      d.title = "入库日期";
-      card.appendChild(d);
-    }
-
-    card.setAttribute("aria-label",
-      c.name + "，投稿 " + c.count + " 份" + (c.note ? "，" + c.note : ""));
+    card.appendChild(node("div", "contrib-name", c.name));
+    if (c.blurb) card.appendChild(node("p", "contrib-blurb", c.blurb));
+    if (c.date) card.title = "加入日期：" + c.date;
+    card.setAttribute("aria-label", c.name + (c.blurb ? "，" + c.blurb : ""));
     return card;
   }
 
   function countLine(n) {
-    return n > 0 ? "共 " + n + " 位投稿者" : "";
+    return n > 0 ? "共 " + n + " 位" : "";
   }
 
   function renderContributors(host, list) {
@@ -421,7 +404,7 @@
     if (!items.length) { renderEmpty(host); return; }
 
     host.className = "contrib-grid";
-    for (var k = 0; k < items.length; k++) host.appendChild(contribCard(items[k], k));
+    for (var k = 0; k < items.length; k++) host.appendChild(contribCard(items[k]));
   }
 
   /** 空状态：不是「加载失败」，是「等你来当第一个」。 */
@@ -432,7 +415,7 @@
     box.appendChild(node("strong", null, "还没有人上榜"));
     box.appendChild(node("p", "contrib-empty-line", "第一份投稿就是第一行名字。"));
     box.appendChild(node("p", "empty-tip",
-      "试卷通过审校后，你的名字会连同投稿份数出现在这里。"));
+      "试卷通过审校后，你的名字会出现在这里。"));
     host.appendChild(box);
   }
 
