@@ -72,7 +72,27 @@
       displayMath: [["\\[", "\\]"]],
       processEscapes: true,
       // 这些宏包在 full 构建里都有；"[+]" 是「在默认集合上追加」的写法。
-      packages: { "[+]": ["ams", "boldsymbol", "physics", "bm"] }
+      packages: { "[+]": ["ams", "boldsymbol", "physics", "bm"] },
+      // 与 question.html 保持同一份宏表：题库里有些命令 MathJax 3 没实现，
+      // 默认会被 noundefined 渲染成红色原文。出卷 PDF 也必须认这些命令，
+      // 否则同一道题在网页正常、导出的 PDF 里却是红字。
+      macros: {
+        textcircled: ["\\enclose{circle}{#1}", 1],
+        AA: "\\text{Å}",
+        oiint: "\\enclose{circle}{\\iint}",
+        llbracket: "[\\![",
+        rrbracket: "]\\!]",
+        dag: "\\dagger",
+        ddag: "\\ddagger",
+        Tilde: "\\tilde",
+        slash: "/",
+        napprox: "\\not\\approx",
+        sech: "\\operatorname{sech}",
+        csch: "\\operatorname{csch}",
+        arcsinh: "\\operatorname{arcsinh}",
+        arctanh: "\\operatorname{arctanh}",
+        em: ""
+      }
     },
     options: {
       skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"],
@@ -387,6 +407,23 @@ body.pg-capturing .pg-pages {
   width: auto !important;
   margin-left: 0 !important;
   transform: none !important;
+}
+
+/* 抓图期间关掉「贵」且印不出来也看不见的效果。
+ *
+ * html2canvas 慢在两件事：遍历 DOM 算每个元素的最终样式、逐元素填充绘制。
+ * 阴影、过渡、动画、滤镜都要它额外量化处理，而 A4 纸面是纯白底，
+ * 这些效果印出来根本看不见 —— 抓图期间禁掉，纯赚速度。
+ * 只作用于 body.pg-capturing 期间，预览界面不受影响。
+ * 刻意不动 background-image 和 border-radius：前者可能承载图片，
+ * 后者是版面的一部分，禁掉有视觉风险，收益却小。 */
+body.pg-capturing .pg-sheet,
+body.pg-capturing .pg-sheet * {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transition: none !important;
+  animation: none !important;
+  filter: none !important;
 }
 
 .pg-empty {

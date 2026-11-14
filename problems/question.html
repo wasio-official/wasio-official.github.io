@@ -72,7 +72,37 @@
       displayMath: [["\\[", "\\]"]],
       processEscapes: true,
       // 这些宏包在 full 构建里都有；"[+]" 是「在默认集合上追加」的写法。
-      packages: { "[+]": ["ams", "boldsymbol", "physics", "bm"] }
+      packages: { "[+]": ["ams", "boldsymbol", "physics", "bm"] },
+      // 题库里有些 LaTeX 命令 MathJax 3 没实现。默认情况下它们会被 noundefined
+      // 扩展悄悄渲染成**红色原文**（不报错、不中断），比如 \textcircled{1} 会
+      // 显示成红色的 "\textcircled1"。这里补一批等价替换。
+      // 清单来自全库 718 卷的命令扫描 + 逐个用 MathJax 本体验证。
+      macros: {
+        // 圈号 ①：用 enclose 画真圆，比塞 Unicode 圈号更贴近原排版
+        textcircled: ["\\enclose{circle}{#1}", 1],
+        // 埃（长度单位）：\AA 是 textcomp 命令，直接给字面字符
+        AA: "\\text{Å}",
+        // 闭合曲面积分：\iint 外面套一圈
+        oiint: "\\enclose{circle}{\\iint}",
+        // 双括号 ⟦ ⟧（stmaryrd 的 \llbracket / \rrbracket）
+        llbracket: "[\\![",
+        rrbracket: "]\\!]",
+        // 剑号与双剑号
+        dag: "\\dagger",
+        ddag: "\\ddagger",
+        // 大小写混写的误写
+        Tilde: "\\tilde",
+        // 斜杠与「非约等于」
+        slash: "/",
+        napprox: "\\not\\approx",
+        // 双曲函数：MathJax 只有 sinh / cosh / tanh
+        sech: "\\operatorname{sech}",
+        csch: "\\operatorname{csch}",
+        arcsinh: "\\operatorname{arcsinh}",
+        arctanh: "\\operatorname{arctanh}",
+        // \textbf{\em xx} 里的 \em 是残留写法，当空命令吃掉
+        em: ""
+      }
     },
     options: {
       skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"],

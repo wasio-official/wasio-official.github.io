@@ -940,11 +940,25 @@ select.ctl:focus {
 .md th { background: var(--bg-subtle); font-weight: 620; }
 .md hr { border: none; border-top: 1px solid var(--line); margin: 20px 0; }
 
-/* 公式溢出保护 */
-.md mjx-container[jax="CHTML"][display="true"] {
+/* 公式溢出保护。
+   注意：只写 [jax="CHTML"] 是漏的 —— 本站用的是 SVG 输出（tex-svg-full），
+   容器属性是 jax="SVG"，于是这条规则从未生效，手机上宽公式直接顶出屏幕
+   （同学反馈的「公式无法换行、超出屏幕」就是这个）。这里不再限定输出格式。 */
+.md mjx-container[display="true"] {
+  display: block;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   padding: 2px 0;
+  /* 移动端横向滑动更跟手 */
+  -webkit-overflow-scrolling: touch;
+}
+/* 窄屏上再把行间公式整体略缩一点，能少一半的横向滚动 */
+@media (max-width: 640px) {
+  .md mjx-container[display="true"] {
+    font-size: 94%;
+    overflow-x: auto;
+  }
 }
 
 /* ---------------------------------------------------------- 状态 */

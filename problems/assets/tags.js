@@ -1,21 +1,26 @@
 /* ============================================================
    考点导航页：四级考点级联筛选 + 难度范围筛选 + 关键词检索 + 跨卷题目汇总
 
-   数据：data/tags.json
-     tree   四级考点树，节点 { name, n, c }
-     index  完整路径（用 "/" 连接）→ 题目引用数组 [ [slug, 题号], ... ]
-            每一级路径在 index 里都有条目，因此「选到哪一级就按
-            哪一级汇总」天然成立。
-     papers 试卷 slug → 试卷显示名
-     stats  { tags, questions }
-     difficulty { min, max, step, unit, labels, values, hist, unlabeled }
-            难度刻度元数据：values 是全部可选刻度（字符串，排序即大小顺序），
-            labels 是刻度 → 显示名（如 1 → 简单），hist 是刻度 → 题数。
+   数据：
+     data/tags.json  考点树与索引
+       tree   四级考点树，节点 { name, n, c }
+       index  完整路径（用 "/" 连接）→ 题目引用数组
+              [ [slug, 题号, 数值难度D, 文字档位序号], ... ]
+              每一级路径在 index 里都有条目，因此「选到哪一级就按
+              哪一级汇总」天然成立。两个难度值随引用下发，所以难度
+              筛选不必先拉题目详情。
+       papers 试卷 slug → 试卷显示名
+       stats  { tags, questions }
+       difficulty { min, max, step, unit, labels, values, hist, unlabeled }
+              难度刻度元数据：values 是全部可选刻度（字符串，排序即大小顺序），
+              labels 是刻度 → 显示名（如 1 → 简单），hist 是刻度 → 题数。
 
-   ⚠️ 难点：难度数值 difficulty_value 只存在于单题 JSON（data/papers/<slug>.json），
-   tags.json 的 index 里只有 [slug, 题号]，**没有难度**。
-   因此难度筛选必须在 fetchItems() 拉到详情之后才能做 —— 这直接影响
-   MAX_RENDER 的截断时机：先截前 300 条再按难度过滤会漏掉本应命中的题。
+     data/qmeta.json  全库精简题录（详见下方「全库精简题录 qmeta」）
+       每题的 标题 / 考点 / 难度 都在这一个文件里。列表渲染优先用它，
+       一次请求替代过去「逐卷拉 600 个 data/papers/*.json、共 37MB」。
+
+   数据不在 qmeta 里（旧部署、增量新卷）时自动回退到逐卷拉取
+   data/papers/<slug>.json，回退路径与原实现一致，见 fetchItemsFromPapers。
 
    标签展示规则统一由 app.js 的 renderTags / TAGS_CONFIG 控制，
    本文件不重复实现标签渲染。
@@ -45,6 +50,11 @@ const state = {
   nameMap: {},         // 试卷 slug → 试卷显示名（优先用 tags.json 的 papers）
   paperLoad: {},       // 试卷 slug → Promise（增量加载题干/标签，做缓存）
 
+  // 全库精简题录 data/qmeta.json（改造后列表渲染的主数据源）。
+  // qmeta 未就绪 / 加载失败时为 null，fetchItems 会自动回退到逐卷拉取。
+  qmeta: null,         // { papers, tagNames, q: { slug: Map(题号 -> 行) } }
+  qmetaLoad: null,     // Promise，避免并发时重复请求同一份题录
+
   path: [],            // 当前选中的考点路径，如 ["力学", "刚体转动"]
   q: "",               // 搜索关键词
 
@@ -73,9 +83,13 @@ function chosenRefs() {
   return state.index[state.path.join("/")] || [];
 }
 
-/** 试卷显示名：优先查 papers 映射表，再回退到已加载的试卷目录 */
+/** 试卷显示名：优先查 papers 映射表，再回退到题录里的卷名，最后用 slug */
 function paperName(slug) {
-  return state.nameMap[slug] || slug;
+  return (
+    state.nameMap[slug] ||
+    (state.qmeta && state.qmeta.papers ? state.qmeta.papers[slug] : "") ||
+    slug
+  );
 }
 
 /** 题目引用的唯一键 */
@@ -320,7 +334,10 @@ function repaintList() {
   apply();
 }
 
-/* ---------------------------------------------- 增量加载单张试卷（带缓存） */
+/* ---------------------------------------------- 增量加载单张试卷（带缓存）
+
+   这是**兜底路径**：qmeta.json 不可用、或某张卷不在 qmeta 里时才走这里。
+   缓存机制（state.paperLoad）保持原样，同一张卷不会被重复请求。 */
 
 function paperJson(slug) {
   if (!state.paperLoad[slug]) state.paperLoad[slug] = loadPaper(slug);
@@ -343,61 +360,193 @@ function makeItem(slug, qid, question) {
   };
 }
 
+/* ---------------------------------------------- 全库精简题录 qmeta
+
+   为什么要有这一层：
+   点「力学」会命中 2501 题、横跨 602 张试卷。旧做法是为每张卷单独
+   fetch data/papers/<slug>.json（单张中位 53KB、最大 438KB），只为了拿
+   每题的标题 / 标签 / 难度，实测约 600 个请求、37MB，用户要等好几秒。
+   data/qmeta.json 把全库压成一份（gzip 不到 100KB）：一次拉 84KB 题录
+   替代 600 个请求 37MB，之后全部在内存里查表 —— 不再发任何试卷请求。
+
+   格式（由 build.py / gen_qmeta.py 生成，两边必须一致）：
+     { v, papers: {slug: 卷名}, tagNames: [考点全路径, ...],
+       q: { slug: [ [题号, 标题, [考点下标...], D, 文字档位序号?], ... ] } }
+
+   用「考点下标」而不是重复写中文路径，是为了把体积压到十分之一。 */
+
+/** 拉取并建立 qmeta 索引（只发一次请求；失败后允许下次重试） */
+function loadQmeta() {
+  if (state.qmeta) return Promise.resolve(state.qmeta);
+  if (state.qmetaLoad) return state.qmetaLoad;
+
+  state.qmetaLoad = fetchJSON(DATA_ROOT + "/qmeta.json").then(function (raw) {
+    if (!raw || !raw.q) throw new Error("qmeta 缺少 q 字段");
+
+    // 每卷的行先索引成「题号 -> 行」，避免每次命中都线性扫一遍整卷
+    var indexed = {};
+    var slugs = Object.keys(raw.q);
+    for (var i = 0; i < slugs.length; i++) {
+      var rows = raw.q[slugs[i]] || [];
+      var map = new Map();
+      for (var j = 0; j < rows.length; j++) {
+        map.set(String(rows[j][0]), rows[j]);
+      }
+      indexed[slugs[i]] = map;
+    }
+
+    state.qmeta = {
+      papers: raw.papers || {},
+      tagNames: raw.tagNames || [],
+      q: indexed,
+    };
+    return state.qmeta;
+  });
+
+  // 失败时清掉缓存：下次调用（例如用户换了考点）还能再试一次；
+  // 这期间由 fetchItems 回退到逐卷加载，页面不会白屏。
+  state.qmetaLoad = state.qmetaLoad.catch(function (err) {
+    state.qmeta = null;
+    state.qmetaLoad = null;
+    throw err;
+  });
+  return state.qmetaLoad;
+}
+
 /**
- * 按 slug 分组增量取题（并发受限于浏览器，逐张串行）。
+ * 把一行 qmeta 还原成与单题 JSON 同形的对象，再交给 makeItem。
+ * 这样 makeItem 的产物结构完全不变（结果行渲染、选题联动都不用改）。
+ */
+function questionFromQmeta(qm, row) {
+  var names = qm.tagNames || [];
+  var codes = row[2] || [];
+  var tags = [];
+  for (var i = 0; i < codes.length; i++) {
+    var name = names[codes[i]];
+    if (name) tags.push(name);   // tags 必须是完整的考点路径字符串
+  }
+  // 第 5 项是文字档位序号（1-based）。它和数值 D 是两套独立维度，
+  // 无法由 D 推出来（D=6 里既有「中上」也有「较难」），所以题录单独带一位；
+  // 老格式没有第 5 项时按「未标注」处理，不会报错。
+  return {
+    title: row[1],
+    tags: tags,
+    difficulty: row.length > 4 ? textOfCode(row[4]) : "",
+    difficulty_value: row[3] === undefined ? null : row[3],
+  };
+}
+
+/** 从 qmeta 查表构造条目；qmeta 里查不到的引用收集起来交给逐卷兜底 */
+function itemsFromQmeta(refs, qm) {
+  var byKey = new Map();
+  var missing = [];
+
+  for (var i = 0; i < refs.length; i++) {
+    var ref = refs[i];
+    var slug = ref[0];
+    var qid = String(ref[1]);
+    var paper = qm.q[slug];
+    var row = paper ? paper.get(qid) : null;
+    if (row) {
+      byKey.set(refKey(slug, qid), makeItem(slug, qid, questionFromQmeta(qm, row)));
+    } else {
+      // 该卷不在题录里（旧缓存 / 增量新卷）—— 逐卷兜底，不能漏题
+      missing.push(ref);
+    }
+  }
+
+  var extraP = missing.length ? fetchItemsFromPapers(missing) : Promise.resolve([]);
+  return extraP.then(function (extra) {
+    for (var j = 0; j < extra.length; j++) {
+      var it = extra[j];
+      byKey.set(refKey(it.p, it.q), it);
+    }
+    // 严格按入参顺序返回：列表顺序依赖 refs（试卷内按题号、试卷间按数据顺序）
+    var out = [];
+    for (var k = 0; k < refs.length; k++) {
+      var item = byKey.get(refKey(refs[k][0], refs[k][1]));
+      if (item) out.push(item);
+    }
+    return out;
+  });
+}
+
+/**
+ * 兜底：按 slug 分组逐卷拉取（并发上限 FETCH_CONCURRENCY）。
+ * 改造前的原始实现，qmeta 不可用或个别卷缺失时仍按它工作。
  * @param {Array} refs  待加载的题目引用 [[slug, 题号], ...]，顺序保持不变
  */
-async function fetchItems(refs) {
-  const byPaper = new Map();
+function fetchItemsFromPapers(refs) {
+  var byPaper = new Map();
   // 索引里带的难度值，试卷拉取失败时仍可用它保持难度筛选正确
-  const dvByKey = new Map();
-  for (const ref of refs) {
-    const slug = ref[0], qid = ref[1];
+  var dvByKey = new Map();
+  for (var i = 0; i < refs.length; i++) {
+    var ref = refs[i];
+    var slug = ref[0], qid = ref[1];
     if (!byPaper.has(slug)) byPaper.set(slug, []);
     byPaper.get(slug).push(String(qid));
+    // ref[2] 是数值难度 D（build.py 写入顺序 [slug, 题号, D, 档位序号]），
+    // 不是文字档位序号 —— 这里必须取 ref[2] 才能和难度区间的刻度对上。
     if (ref.length > 2) dvByKey.set(refKey(slug, qid), ref[2]);
   }
 
-  const found = new Map();
+  var found = new Map();
+  var slugs = [];
+  byPaper.forEach(function (qids, slug) { slugs.push(slug); });
+  var cursor = 0;
 
   // 一次检索可能横跨上百张试卷（如「简谐振动」命中 203 题 / 106 卷），
   // 逐张串行会慢到用户以为卡死。这里限制并发数并行拉取，
   // 既快又不至于一次性打出上百个请求。
-  const slugs = [...byPaper.keys()];
-  let cursor = 0;
-
-  async function worker() {
-    while (cursor < slugs.length) {
-      const slug = slugs[cursor++];
-      const qids = byPaper.get(slug);
-      try {
-        const paper = await paperJson(slug);
-        const qmap = new Map();
-        (paper.questions || []).forEach((q) => qmap.set(String(q.id), q));
-        for (const qid of qids) {
-          found.set(refKey(slug, qid), makeItem(slug, qid, qmap.get(qid)));
-        }
-      } catch (err) {
-        // 单张试卷取不到不影响整体，降级成只有题号的条目；
-        // 难度用索引下发的值兜底，避免筛选结果与总数对不上
-        for (const qid of qids) {
-          const it = makeItem(slug, qid, null);
-          const dv = dvByKey.get(refKey(slug, qid));
-          if (dv !== undefined) it.difficulty_value = dv;
-          found.set(refKey(slug, qid), it);
-        }
-        console.warn("试卷加载失败，已降级展示：", slug, err);
+  function worker() {
+    if (cursor >= slugs.length) return Promise.resolve();
+    var slug = slugs[cursor++];
+    var qids = byPaper.get(slug);
+    return paperJson(slug).then(function (paper) {
+      var qmap = new Map();
+      (paper.questions || []).forEach(function (q) { qmap.set(String(q.id), q); });
+      for (var j = 0; j < qids.length; j++) {
+        found.set(refKey(slug, qids[j]), makeItem(slug, qids[j], qmap.get(qids[j])));
       }
-    }
+    }).catch(function (err) {
+      // 单张试卷取不到不影响整体，降级成只有题号的条目；
+      // 难度用索引下发的值兜底，避免筛选结果与总数对不上
+      for (var j = 0; j < qids.length; j++) {
+        var it = makeItem(slug, qids[j], null);
+        var dv = dvByKey.get(refKey(slug, qids[j]));
+        if (dv !== undefined) it.difficulty_value = dv;
+        found.set(refKey(slug, qids[j]), it);
+      }
+      console.warn("试卷加载失败，已降级展示：", slug, err);
+    }).then(function () {
+      return worker();
+    });
   }
 
-  const workers = Array.from(
-    { length: Math.min(FETCH_CONCURRENCY, slugs.length) },
-    () => worker()
-  );
-  await Promise.all(workers);
+  var workers = [];
+  var n = Math.min(FETCH_CONCURRENCY, slugs.length);
+  for (var w = 0; w < n; w++) workers.push(worker());
 
-  return refs.map(([slug, qid]) => found.get(refKey(slug, qid))).filter(Boolean);
+  return Promise.all(workers).then(function () {
+    return refs
+      .map(function (r) { return found.get(refKey(r[0], r[1])); })
+      .filter(Boolean);
+  });
+}
+
+/**
+ * 按当前引用取题：优先用 qmeta 内存查表（零网络请求）；
+ * qmeta 拿不到时回退到逐卷拉取，保证任何情况下都能出结果。
+ * @param {Array} refs  待加载的题目引用 [[slug, 题号, D?, 档位序号?], ...]
+ */
+function fetchItems(refs) {
+  return loadQmeta().then(function (qm) {
+    return itemsFromQmeta(refs, qm);
+  }, function (err) {
+    // 题录加载失败（旧部署 / 网络抖动）：不报错、不白屏，走原来的逐卷路径
+    console.warn("qmeta.json 不可用，回退逐卷加载：", err && err.message ? err.message : err);
+    return fetchItemsFromPapers(refs);
+  });
 }
 
 /* ---------------------------------------------- 搜索索引
@@ -635,10 +784,11 @@ async function applyFiltered(q) {
       if (useDiff) hits = hits.filter((it) => diffMatch(it.difficulty_value));
       if (useText) hits = hits.filter((it) => textMatch(it.difficulty_text));
     } else {
-      // 未搜索：先在**引用层**按难度过滤，再只拉要渲染的那些详情。
+      // 未搜索：先在**引用层**按难度过滤，再取要渲染的那些条目。
       //
-      // 难度值随索引一起下发（引用的第三、四项），所以这里不必下载全部候选试卷
-      // （最坏跨 600+ 张卷、十几 MB）。先过滤、后取详情，
+      // 难度随索引一起下发（ref[2] 是数值 D、ref[3] 是文字档位序号），
+      // 所以过滤完全不用联网；过滤后的条目由 fetchItems 从 qmeta 查表，
+      // 不发任何试卷请求（改造前这里要逐卷拉 600+ 张卷、几十 MB）。
       // 结果行里的总数依然取自全量，不是「前 300 条里的命中数」。
       const source = refs || allRefs();
       const picked = useFilter
@@ -1020,6 +1170,13 @@ function initFilters() {
 
 (async function main() {
   renderTopbar([{ label: "题库", href: "library.html" }, { label: "考点" }]);
+
+  // 题录与 tags.json 并行预取：qmeta 是后续所有列表渲染的必需数据，
+  // 现在发出请求，用户点第一个考点时它多半已经就绪，省掉一轮等待。
+  // 失败不提示、不阻塞 —— fetchItems 会自动回退到逐卷加载。
+  loadQmeta().catch(function (err) {
+    console.warn("qmeta.json 预取失败，稍后回退逐卷加载：", err && err.message ? err.message : err);
+  });
 
   try {
     const data = await fetchJSON(`${DATA_ROOT}/tags.json`);
