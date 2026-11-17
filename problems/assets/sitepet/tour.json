@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "order": [
+    "index",
+    "library",
+    "paper",
+    "question",
+    "pdfgen",
+    "tags",
+    "submit"
+  ],
+  "segments": {
+    "index": {
+      "title": "落地页",
+      "url": "index.html",
+      "steps": [
+        {
+          "target": ".stats",
+          "text": "欢迎来到WASIO的物理竞赛题库！这里是题库首页，列出了当前试卷、题目、配图的数量。"
+        },
+        {
+          "target": ".landing-actions",
+          "text": "下方的三个入口分别是进入题库、考点导航、搜索题目。点击最下方还能投稿试卷。"
+        }
+      ]
+    },
+    "library": {
+      "title": "题库页",
+      "url": "library.html",
+      "steps": [
+        {
+          "target": "#search",
+          "text": "在题库界面，可以搜索试卷名或考点，支持按类型收窄、排序，还可以随机抽一套试卷。"
+        },
+        {
+          "target": "#grid",
+          "text": "点击试卷卡片就可以查看试卷。"
+        }
+      ]
+    },
+    "tags": {
+      "title": "考点导航页",
+      "url": "tags.html",
+      "steps": [
+        {
+          "target": "#search",
+          "text": "这是考点导航页，在这里可以按照四级考点精准检索试题，同时可以按照难度等级进行筛选。"
+        }
+      ]
+    },
+    "paper": {
+      "resolve": "paper",
+      "title": "试卷页",
+      "steps": [
+        {
+          "target": ".toolbar",
+          "text": "在试卷页面，可以搜索该试卷中的题干、考点。"
+        },
+        {
+          "target": "#ps-bar",
+          "text": "在下方的组卷栏中可以看到已选题数与导出按钮。"
+        }
+      ]
+    },
+    "question": {
+      "resolve": "question",
+      "title": "单题页",
+      "steps": [
+        {
+          "target": "#q-head",
+          "text": "点击进入题目页面，上方显示了题目难度、知识点；右侧勾选即可加入出卷目录。"
+        },
+        {
+          "target": "#p-analysis, #p-answer",
+          "optional": true,
+          "text": "下方可以一键展开 / 收起解析与参考答案；答案由AI生成，请注意辨别！"
+        }
+      ]
+    },
+    "submit": {
+      "title": "投稿与荣誉墙",
+      "url": "submit.html",
+      "steps": [
+        {
+          "target": ".submit-cols",
+          "text": "这是投稿页面，欢迎各位同学投稿符合规定的试卷，帮助同学们更好地学习\\o/\n投稿通过就可以上荣誉墙哦~"
+        }
+      ]
+    },
+    "pdfgen": {
+      "title": "网页出卷",
+      "url": "pdfgen.html",
+      "steps": [
+        {
+          "target": "#pg-panel",
+          "text": "点击组卷的“导出PDF”按钮即可进入出卷页面。在这里可以把组卷目录排成 A4 文档：点「下载 PDF」拿到文件（可能需要等待一段时间），或用「打印 → 存为 PDF」。"
+        },
+        {
+          "target": "#pg-upload",
+          "text": "拖入组卷 JSON，或点击选择文件；支持本站「导选出卷目录」生成的 .json。"
+        }
+      ]
+    }
+  }
+}
