@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "default": "hiyori",
+  "models": [
+    {
+      "id": "hiyori",
+      "path": "models/hiyori/Hiyori.model3.json",
+      "fallbackImage": "models/hiyori/Hiyori.2048/texture_00.png",
+      "name": "Hiyori（官方示例·人物）",
+      "scale": 0.1,
+      "mobileScale": 0.06,
+      "position": [68, 0],
+      "mobilePosition": [38, 0],
+      "source": "Live2D CubismWebSamples 官方免费示例素材"
+    }
+  ]
+}
