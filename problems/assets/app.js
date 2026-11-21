@@ -18,8 +18,84 @@ function loadPapers() {
   return _papersCache;
 }
 
-function loadPaper(slug) {
-  return fetchJSON(`${DATA_ROOT}/papers/${encodeURIComponent(slug)}.json`);
+/* ---------------------------------------------- 旧 slug 跳转
+
+   卷改名后 slug 会变（slug = 卷名里的 ASCII 片段 + 卷名哈希），旧链接取
+   data/papers/<旧 slug>.json 必然 404。data/aliases.json 记录「旧 slug -> 新 slug」
+   （由 rebuild_sitedata.py 每次重推时自动生成），这里在两处生效：
+
+     1. loadPaper() 先查表：命中就拿新 slug 去取数据 —— paper.html?id=
+        / question.html?p= / 出卷页的 loadPaper() 全都走这一个口子；
+     2. 命中时顺手把地址栏里的 id / p 参数换成新 slug（replaceState，不刷新），
+        这样用户复制出去的链接也是新的。
+
+   别名表是可选的增强：文件缺失或解析失败时就是空表，行为与以前完全一致。
+   ---------------------------------------------- */
+
+const SLUG_ALIAS_PATH = `${DATA_ROOT}/aliases.json`;
+
+let _slugAliases = null;      // Map<旧 slug, 新 slug>，取到后进程内复用
+let _slugAliasesLoad = null;  // 并发去重；失败则清空以便下次重试
+
+/** 拉取并缓存别名表（拿不到就返回空表，绝不抛错） */
+function loadSlugAliases() {
+  if (_slugAliases) return Promise.resolve(_slugAliases);
+  if (_slugAliasesLoad) return _slugAliasesLoad;
+
+  _slugAliasesLoad = fetchJSON(SLUG_ALIAS_PATH)
+    .then((raw) => {
+      // 兼容两种写法：{ aliases: {...} } 与直接 {...}
+      const map = (raw && raw.aliases) || raw || {};
+      _slugAliases = new Map(
+        Object.keys(map).filter((k) => map[k]).map((k) => [k, String(map[k])])
+      );
+      return _slugAliases;
+    })
+    .catch((err) => {
+      console.warn(
+        "aliases.json 不可用，旧链接跳转未启用：",
+        err && err.message ? err.message : err
+      );
+      _slugAliasesLoad = null;   // 允许下次重试
+      return new Map();
+    });
+
+  return _slugAliasesLoad;
+}
+
+/** 把地址栏里的 id / p 参数从旧 slug 换成新 slug（file:// 或无 history 时静默跳过） */
+function rewriteSlugParam(oldSlug, newSlug) {
+  try {
+    if (typeof history === "undefined" || !history.replaceState) return;
+    const u = new URL(location.href);
+    let hit = false;
+    ["id", "p"].forEach((k) => {
+      if (u.searchParams.get(k) === oldSlug) {
+        u.searchParams.set(k, newSlug);
+        hit = true;
+      }
+    });
+    if (hit) history.replaceState(null, "", u.pathname + u.search + u.hash);
+  } catch (e) {
+    /* 改不动地址栏不影响页面本身 */
+  }
+}
+
+/** 旧 slug -> 新 slug；未命中返回原值 */
+async function resolveSlug(slug) {
+  const key = String(slug ?? "");
+  if (!key) return slug;
+  const map = await loadSlugAliases();
+  const target = map.get(key);
+  if (!target) return slug;
+  rewriteSlugParam(key, target);
+  return target;
+}
+
+/** 取单卷数据；旧 slug 会自动落到新卷（见上方「旧 slug 跳转」） */
+async function loadPaper(slug) {
+  const real = await resolveSlug(slug);
+  return fetchJSON(`${DATA_ROOT}/papers/${encodeURIComponent(real)}.json`);
 }
 
 /* ---------------------------------------------- URL 参数 */
@@ -254,9 +330,81 @@ function unstashMath(html) {
   });
 }
 
-/** 行内标记：粗体 / 斜体 / 行内代码 */
+/** 正文里的 HTML 标签白名单。
+ *
+ * 题库正文由 MinerU 解析而来，有些题的解里面直接用 <table> 排数据表
+ * （实测 231 题、<td> 三万多个），化学式用 <sub>/<sup>。这些必须原样放行。
+ *
+ * 但**不能**放行 <a> <b> <i> <s> <x> <t> <r> 这类单字母名：
+ * 题库里有大量写在公式外的数学不等式，如「相距为 d（d<<a）」，
+ * 浏览器会把 `<<a` 当成 `<a` 标签开头，一直吞到下一个 `>` ——
+ * 题干就是从那里断掉的（2025-兰阶-暑假-第四套 第 7 题实测）。
+ */
+const MD_ALLOWED_TAG = /^<\/?(?:table|thead|tbody|tfoot|tr|td|th|caption|colgroup|col|br|hr|sub|sup|img)(?=[\s/>])/i;
+
+/** 已有的 HTML 实体，别二次转义 */
+const HTML_ENTITY = /^&(?:#\d+|#x[0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);/;
+
+/**
+ * 转义正文，但放行白名单标签。
+ *
+ * 手写扫描而不是正则：`<` 要不要转义取决于它后面跟的是什么，
+ * 正则做不到「这里放行、那里转义」还不误伤属性。
+ */
+function escapeKeepTags(s) {
+  s = String(s == null ? "" : s);
+  let out = "";
+  let i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (c === "<") {
+      const rest = s.slice(i);
+      if (MD_ALLOWED_TAG.test(rest)) {
+        const close = s.indexOf(">", i);
+        if (close >= 0) {
+          out += s.slice(i, close + 1);
+          i = close + 1;
+          continue;
+        }
+      }
+      out += "&lt;";
+      i += 1;
+      continue;
+    }
+    if (c === ">") {
+      out += "&gt;";
+      i += 1;
+      continue;
+    }
+    if (c === "&") {
+      const rest = s.slice(i);
+      out += HTML_ENTITY.test(rest) ? "&" : "&amp;";
+      i += 1;
+      continue;
+    }
+    out += c;
+    i += 1;
+  }
+  return out;
+}
+
+/** 行内标记：粗体 / 斜体 / 行内代码
+ *
+ * ⚠️ 进来第一件事必须是 escapeKeepTags()。
+ *
+ * 这里生成的是要直接塞进 innerHTML 的 HTML 片段，调用方
+ * （`<p>${inlineMd(...)}</p>`、`<li>…`、`<h3>…`）都不会再转义一次。
+ * 源文本里任何裸的 `<` 都会被浏览器当成标签开始，把后面的内容
+ * 一路吞到下一个 `>` —— 实测踩过：某题正文写「相距为 d（d<<a，…）」，
+ * `<<a` 被当成 `<a` 标签开头，题干从那里断掉，后面整段消失。
+ *
+ * 顺序上必须先转义再做标记替换：`<strong>` / `<code>` 这些标签是
+ * 我们在替换时生成的，放在转义之后就不会被自己转义掉。
+ * 公式体不经过这里（renderMarkdown 已把 $…$ 换成占位符，
+ * 还原时 unstashMath 自己做了 esc），所以不用担心数学里的 `<`。
+ */
 function inlineMd(s) {
-  return s
+  return escapeKeepTags(s)
     .replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`)
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     // 斜体：原实现用后行断言排除「前导是 * 或单词字符」的情况（见上，老浏览器不支持）；
