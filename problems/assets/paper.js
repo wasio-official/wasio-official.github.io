@@ -17,7 +17,7 @@ function questionItem(item, index, slug) {
           <span class="q-title-row">
             <span class="q-title">${esc(item.title)}</span>
             ${difficultyChip(item.difficulty)}
-            ${typeof difficultyD === "function" && item.score ? difficultyD(item.score.D) : ""}
+            ${typeof difficultyD === "function" ? difficultyD(difficultyDOf(item)) : ""}
           </span>
           <span class="q-tags">${tags}</span>
         </span>

@@ -252,6 +252,28 @@ function difficultyD(value) {
   return `<span class="chip chip-d" title="数值难度 D（0–8）">D ${esc(value)}</span>`;
 }
 
+/**
+ * 取一道题的数值难度用于展示。
+ *
+ * 优先 score.D：它是**字符串**，能保留「6-7」这种区间写法（全库 390 题是区间，
+ * 例如 OPhO 第 10 届决赛第 1 题 score.D='6-7' 而 difficulty_value=6.0，
+ * 后者把区间压成了下限）。
+ *
+ * 但 score 是「11 维度评分」的可选字段，题库里有 5588 题（约一半）压根没有
+ * score —— 这些题**仍然有 difficulty_value**，过去页面直接按 score 有无来决定
+ * 显不显示，于是那半数题一个难度徽标都没有。这里退到 difficulty_value 兜底。
+ */
+function difficultyDOf(item) {
+  if (!item) return "";
+  const s = item.score;
+  if (s && typeof s === "object") {
+    const d = s.D;
+    if (d !== null && d !== undefined && d !== "") return d;
+  }
+  const v = item.difficulty_value;
+  return v === null || v === undefined ? "" : v;
+}
+
 /* ---------------------------------------------- Markdown 渲染
 
    数据已是规范 Markdown（MinerU 产物）。这里做一层轻量渲染：

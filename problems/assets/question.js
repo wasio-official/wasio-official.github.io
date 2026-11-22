@@ -93,7 +93,7 @@ function renderQuestion() {
     </div>
     <div class="card-meta">
       ${difficultyChip(item.difficulty)}
-      ${typeof difficultyD === "function" && item.score ? difficultyD(item.score.D) : ""}
+      ${typeof difficultyD === "function" ? difficultyD(difficultyDOf(item)) : ""}
       ${typeof psCheckbox === "function" ? psCheckbox(paper.slug, item.id, "加入出卷目录") : ""}
     </div>
     ${tags ? `<div class="q-tags">${tags}</div>` : ""}
