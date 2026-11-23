@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>投稿试卷 — 物理竞赛题库</title>
-<meta name="description" content="把手上少见的好卷子发出来：电子版 PDF、清晰的拍照或扫描、自整理的讲义题集都收，审校后带署名入库，投稿者可上荣誉墙。">
+<meta name="description" content="物理竞赛题库投稿页：投稿入口目前暂停收稿，页面保留投稿说明与荣誉墙，恢复收稿会在站内通知。">
 <link rel="stylesheet" href="assets/app.css">
 <link rel="icon" href="assets/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="assets/icon-192.png" sizes="192x192">
@@ -79,9 +79,16 @@
     <p class="page-desc">
       题库靠大家补齐 —— 越是少见的好卷子，越值得被收进来。
     </p>
+    <p class="page-desc submit-paused-note" hidden>
+      投稿目前<strong>暂停收稿</strong>：手上的卷子还在整理，这批处理完再开。
+      已经投过的照常处理，处理完会正常上荣誉墙。
+    </p>
   </section>
 
-  <section class="panel" aria-labelledby="guide-title">
+  <!-- 投稿说明：暂停收稿时（body.submit-paused）由 app.css 整块隐藏 ——
+       收稿都停了还列着「收这些 / 这些先不收」会让人以为还在收。
+       恢复投稿只需把 feedback-config.js 里 submitEnabled 改回 true，这块自动回来。 -->
+  <section class="panel" id="guide" aria-labelledby="guide-title">
     <div class="panel-head">
       <h2 id="guide-title">投稿说明</h2>
       <span class="hint">单文件 20MB 以内</span>
@@ -124,7 +131,7 @@
   <section class="panel" id="entry" aria-labelledby="entry-title">
     <div class="panel-head">
       <h2 id="entry-title">投稿入口</h2>
-      <span class="hint">金数据表单</span>
+      <span class="hint" id="entry-hint">金数据表单</span>
     </div>
     <div class="panel-body">
       <div id="submit-channel">

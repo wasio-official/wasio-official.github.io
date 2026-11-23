@@ -1612,6 +1612,16 @@ select.ctl:focus {
   color: var(--ink-soft);
 }
 
+/* ---- 投稿暂停（2.4.0 起）：入口面板换成暂停说明，说明板块整块收起 ---- */
+body.submit-paused #guide { display: none; }
+/* 上面那句「题库靠大家补齐」的横幅在暂停时应换成暂停口径，
+   由 submit.html 里的 .submit-paused-note 顶替（JS 取消 hidden）。 */
+body.submit-paused .page-head > .page-desc:not(.submit-paused-note) { display: none; }
+.submit-paused-box .submit-desc {
+  max-width: 580px;
+  margin: 0 auto 12px;
+}
+
 /* ---- 荣誉墙：卡片，只有名字 + 一句话，不排名 ---- */
 .contrib-grid {
   display: flex;

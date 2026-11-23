@@ -12,6 +12,9 @@
    因为那个文件压根不在本页加载）。
 
    行为：
+     · FEEDBACK_CONFIG.submitEnabled === false → 整页进入「暂停收稿」：入口面板换成
+       暂停说明，不给表单链接、不请求二维码库；<body> 挂 submit-paused 类，
+       app.css 用它把「投稿说明」整块收起来（2.4.0 起是暂停状态）。
      · 中途缺 submitFormUrl（空 / 非 http(s)）→ 显示「投稿通道暂未开放」，
        不生成任何链接、不请求二维码库。
      · 桌面（宽 ≥ 768px）：二维码 + 大按钮「打开投稿表单」+ 可复制链接。
@@ -48,6 +51,8 @@
   var FORM_URL = trim(cfg.submitFormUrl);
   var PARAM = String(cfg.paramName || PARAM_DEFAULT);
   var urlOk = /^https?:\/\/\S+$/i.test(FORM_URL);
+  // 总开关：只有显式写 false 才算暂停（配置缺字段时按原来的行为走）。
+  var ENABLED = cfg.submitEnabled !== false;
 
   var lastMobile = null;
   var resizeTimer = null;
@@ -269,6 +274,21 @@
     host.appendChild(box);
   }
 
+  /* 暂停收稿（2.4.0 起）：不是配置坏了，是主动关的，所以文案要说清
+     「为什么关、关了多久、想分享怎么办」，别让人以为表单坏了反复试。 */
+  function renderPaused(host) {
+    clear(host);
+    var box = node("div", "submit-closed submit-paused-box");
+    box.appendChild(node("p", "submit-closed-title", "投稿暂停收稿"));
+    box.appendChild(node("p", "submit-desc",
+      "手上的卷子还在整理，投稿入口先关一段时间 —— 现在提交的没人接，所以先不开了。"));
+    box.appendChild(node("p", "submit-hint",
+      "已经投过的卷子照常处理，处理完会正常上荣誉墙。"));
+    box.appendChild(node("p", "submit-hint",
+      "想分享卷子的话，可以先到页脚的 B 站主页留言；恢复投稿会在站点里通知。"));
+    host.appendChild(box);
+  }
+
   function openLink(url, cls, text) {
     var a = node("a", cls, text);
     a.setAttribute("href", url);
@@ -336,6 +356,7 @@
     if (!host) return;
 
     clear(host);
+    if (!ENABLED) { renderPaused(host); return; }    // 暂停收稿：不给任何入口
     if (!urlOk) { renderClosed(host); return; }     // 未配置：只给一句「暂未开放」
 
     var url = buildUrl(submitValue());
@@ -425,7 +446,11 @@
     clear(host);
     var box = node("div", "empty contrib-empty contrib-error");
     box.appendChild(node("strong", null, "荣誉墙暂时读不出来"));
-    box.appendChild(node("p", "contrib-empty-line", "上面的投稿入口不受影响，仍然可以正常投稿。"));
+    if (ENABLED) {
+      box.appendChild(node("p", "contrib-empty-line", "上面的投稿入口不受影响，仍然可以正常投稿。"));
+    } else {
+      box.appendChild(node("p", "contrib-empty-line", "投稿目前也是暂停状态，先把这页留个书签，之后再来。"));
+    }
     box.appendChild(node("p", "empty-tip", "稍后刷新本页再试。"));
     if (reason) {
       var detail = node("p", "contrib-detail", reason);
@@ -476,6 +501,19 @@
 
   function boot() {
     try { renderTopbar([{ label: "投稿" }]); } catch (e) { /* app.js 没加载成功时顶栏空着 */ }
+
+    // 暂停时给 <body> 挂个类：app.css 用它把「投稿说明」整块收起来，
+    // 并把页面标题下的说明换成暂停口径（见 submit.html 的 .submit-paused 规则）。
+    if (!ENABLED && document.body) {
+      try {
+        document.body.className += (document.body.className ? " " : "") + "submit-paused";
+        // 标题下的暂停说明是 HTML 里写死的（hidden 保证没 JS 时不出现半截话）
+        var note = document.querySelector(".submit-paused-note");
+        if (note) note.hidden = false;
+        var hint = document.getElementById("entry-hint");
+        if (hint) hint.textContent = "暂停收稿";
+      } catch (e) { /* 样式挂不上不影响功能，入口照样是暂停态 */ }
+    }
 
     lastMobile = isMobile();
     renderChannel();

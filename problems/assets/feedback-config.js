@@ -15,6 +15,12 @@
 
    submitFormUrl：**试卷投稿**表单（submit.html 用），与上面的纠错反馈是两个
      不同的金数据表单。留空 = 投稿页显示「投稿通道暂未开放」，不会出现坏链接。
+
+   submitEnabled：投稿功能总开关。false = 投稿页整页进入「暂停收稿」状态：
+     不渲染表单入口、不生成二维码、不请求 qrcode.js，投稿说明板块一并不显示
+     （收稿都停了还列着「收这些/这些先不收」会像是还在收）。
+     与 submitFormUrl 分开是为了**留地址**：暂停期间地址不动，恢复时只把这里
+     改回 true 就行，不用重新填表单链接。2.4.0 起为 false。
    ============================================================ */
 window.FEEDBACK_CONFIG = {
   // 金数据「网站问题反馈」表单（2026-11-10 接入）。
@@ -25,6 +31,9 @@ window.FEEDBACK_CONFIG = {
   // 金数据「试卷提交」表单（2026-11-10 接入）：第一题上传试卷文件（≤20MB），
   // 第二题「希望你被称呼的名字」，用于荣誉墙。只在 submit.html 使用。
   submitFormUrl: "https://ews48ewb.jsjform.com/f/KYh6Lt",
+
+  // 投稿总开关：2026-11-23（2.4.0）起暂停收稿。地址保留在上面，恢复改回 true。
+  submitEnabled: false,
 
   paramName: "x_field_1",
   idMode: "name"
