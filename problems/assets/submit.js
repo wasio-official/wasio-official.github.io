@@ -281,9 +281,9 @@
     var box = node("div", "submit-closed submit-paused-box");
     box.appendChild(node("p", "submit-closed-title", "投稿暂停收稿"));
     box.appendChild(node("p", "submit-desc",
-      "手上的卷子还在整理，投稿入口先关一段时间 —— 现在提交的没人接，所以先不开了。"));
+      "投稿入口先关一段时间 —— 现在提交没人接，等这批卷子处理完再开。"));
     box.appendChild(node("p", "submit-hint",
-      "已经投过的卷子照常处理，处理完会正常上荣誉墙。"));
+      "已经投过的照常处理，处理完会正常上荣誉墙。"));
     box.appendChild(node("p", "submit-hint",
       "想分享卷子的话，可以先到页脚的 B 站主页留言；恢复投稿会在站点里通知。"));
     host.appendChild(box);
