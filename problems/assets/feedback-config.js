@@ -34,15 +34,15 @@ window.FEEDBACK_CONFIG = {
   // 与金数据「链接扩展属性」的拼法一致（后台那套「生成链接」只是手工助手）。
   formUrl: "https://ews48ewb.jsjform.com/f/Eux3lR",
 
-  // 腾讯问卷「试卷投稿」表单：等链接定下来再填（形如 https://wj.qq.com/s2/xxxxxxxx/）。
-  // 留空期间投稿页保持暂停态，不会有坏链接。
-  submitFormUrl: "",
+  // 腾讯问卷「试卷提交」表单（2026-11-25 接入）：第 1 题上传图片/文件（单个 ≤300MB），
+  // 第 2 题留称呼用于荣誉墙；作者每 1–2 周看一次。
+  submitFormUrl: "https://wj.qq.com/s2/28817809/jpcl/",
 
   // 腾讯问卷不需要 URL 参数；要换回金数据就填 "x_field_1"。
   submitParamName: "",
 
-  // 投稿总开关：2026-11-23（2.4.0）起暂停收稿。链接到位后改回 true 即恢复。
-  submitEnabled: false,
+  // 投稿总开关：2026-11-23（2.4.0）暂停、2026-11-25（2.6.0）重新开放。
+  submitEnabled: true,
 
   paramName: "x_field_1",
   idMode: "name"
