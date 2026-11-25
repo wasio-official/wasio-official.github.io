@@ -23,10 +23,12 @@
        生成失败（库没加载上 / 内容太长 / 没 canvas）都有文字兜底。
      · 荣誉墙读 data/contributors.json；空 / 加载失败都退化成文字块，不白屏。
 
-   参数拼装（金数据「扩展属性」x_field_1，一个字段承载全部上下文）：
-     链接 = submitFormUrl ?(或&) x_field_1=encodeURIComponent("v版本｜试卷投稿")
-     分隔符是全角「｜」（U+FF5C），编码后是 %EF%BD%9C：金数据扩展值对
-     半角符号不友好。取不到 SITE_VERSION 时整段版本号省掉。
+   链接参数（可选，默认关闭）：
+     submitParamName 为空 = 链接原样使用，不追加任何参数 —— 腾讯问卷不需要
+     扩展属性，2.5 恢复投稿后就是这个状态。
+     若将来换回支持「扩展属性」的表单（如金数据），把 submitParamName 设成
+     x_field_1 即可：链接会追加 x_field_1=encodeURIComponent("v版本｜试卷投稿")，
+     全角「｜」（U+FF5C）是金数据要求的写法，取不到 SITE_VERSION 时整段版本号省掉。
 
    荣誉墙数据（data/contributors.json）：
      {"contributors":[{"name":"张同学","count":3,"date":"2026-11-10","note":"2021-CPHOS 全套"}]}
@@ -49,7 +51,10 @@
 
   var cfg = window.FEEDBACK_CONFIG || {};
   var FORM_URL = trim(cfg.submitFormUrl);
-  var PARAM = String(cfg.paramName || PARAM_DEFAULT);
+  // 投稿表单专用参数名（**不再**复用 paramName：那个是纠错反馈表单在用）。
+  // 空 = 链接原样使用，不追加参数（腾讯问卷用这个状态）。
+  var SUBMIT_PARAM = trim(cfg.submitParamName);
+  var PARAM = SUBMIT_PARAM || PARAM_DEFAULT;
   var urlOk = /^https?:\/\/\S+$/i.test(FORM_URL);
   // 总开关：只有显式写 false 才算暂停（配置缺字段时按原来的行为走）。
   var ENABLED = cfg.submitEnabled !== false;
@@ -303,7 +308,7 @@
       "点下面的按钮打开投稿表单，第一题就是上传试卷文件。"));
     host.appendChild(openLink(url, "btn btn-primary submit-go", "打开投稿表单"));
     host.appendChild(node("p", "submit-hint",
-      "将在新标签页打开金数据表单；返回本页可以继续浏览题库。"));
+      "将在新标签页打开投稿表单；返回本页可以继续浏览题库。"));
   }
 
   /** 桌面：二维码 + 大按钮 + 可复制链接。 */
@@ -342,8 +347,11 @@
     row.appendChild(copy);
     side.appendChild(row);
 
-    side.appendChild(node("p", "submit-hint",
-      "链接里带了站点版本号，方便我们对应是哪一版页面进来的。"));
+    // 「链接里带了版本号」这句只在真的追加了参数时才成立
+    if (SUBMIT_PARAM) {
+      side.appendChild(node("p", "submit-hint",
+        "链接里带了站点版本号，方便我们对应是哪一版页面进来的。"));
+    }
 
     wrap.appendChild(side);
     host.appendChild(wrap);
@@ -359,7 +367,8 @@
     if (!ENABLED) { renderPaused(host); return; }    // 暂停收稿：不给任何入口
     if (!urlOk) { renderClosed(host); return; }     // 未配置：只给一句「暂未开放」
 
-    var url = buildUrl(submitValue());
+    // 需要追加参数时才拼，否则表单链接原样使用（腾讯问卷就是原样）
+    var url = SUBMIT_PARAM ? buildUrl(submitValue()) : FORM_URL;
     if (isMobile()) renderMobile(host, url);
     else renderDesktop(host, url);
   }
