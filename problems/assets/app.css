@@ -517,6 +517,19 @@ select.ctl:focus {
 
 .paper-head .card-meta { margin-bottom: 14px; }
 
+/* 卷级贡献者署名：只有「这卷是谁给的」一行小字，不做到题级。
+   没写 contributor 的老卷不渲染这一行，所以历史卷看起来跟以前一样。 */
+.paper-contrib {
+  margin: -6px 0 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-mute);
+}
+.paper-contrib strong {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
 /* ---------------------------------------------------------- 题目列表 */
 
 .q-list { display: flex; flex-direction: column; gap: 10px; }

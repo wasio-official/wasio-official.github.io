@@ -111,6 +111,32 @@ function updateSelectAllLabel() {
       { label: paper.name },
     ]);
 
+    // 卷级贡献者署名（数据来自试卷的 contributor 字段，构建时从 frontmatter 取）。
+    // 只做卷级：题目级的 contributor 不展示，避免同一卷里出现多行出处。
+    // 老卷没有这个字段，就不渲染这一行。
+    const contrib = String(paper.contributor || "").trim();
+    if (contrib) {
+      const line = document.createElement("p");
+      line.className = "paper-contrib";
+      line.innerHTML = `本卷由 <strong>${esc(contrib)}</strong> 贡献`;
+      document.getElementById("paper-head").appendChild(line);
+
+      // 顺手补上「累计多少卷」：从题库索引里数同一位贡献者的卷数。
+      // 索引拿不到就只留前半句，不影响页面。
+      loadPapers()
+        .then((idx) => {
+          const list = Array.isArray(idx) ? idx : (idx && idx.papers) || [];
+          const n = list.filter(
+            (p) => String((p && p.contributor) || "").trim() === contrib
+          ).length;
+          if (n > 1) {
+            line.innerHTML =
+              `本卷由 <strong>${esc(contrib)}</strong> 贡献 · 累计 ${n} 卷`;
+          }
+        })
+        .catch(() => {});
+    }
+
     document.getElementById("f-q").addEventListener("input", (e) => {
       state.q = e.target.value;
       apply();
